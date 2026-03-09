@@ -1,0 +1,74 @@
+# Ambiente virtual
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Build / distribuição
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs
+*.log
+
+# Configurações locais
+.env
+.env.*
+*.local
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# VS Code / IDEs
+.vscode/
+.idea/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Testes / cobertura
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Ferramentas estáticas
+.mypy_cache/
+.ruff_cache/
+.pyre/
+
+# Modelos e artefatos gerados
+outputs/models/
+outputs/metrics/
+outputs/figures/
+
+# Dados locais
+data/raw/
+data/processed/
+data/external/
+
+# Arquivos pesados comuns
+*.csv
+*.xlsx
+*.parquet
+*.joblib
+*.pkl
+*.pickle
+*.h5
+*.pt
+*.pth
+*.onnx
+
+# Seeds temporários / caches
+.cache/
+temp/
+tmp/
