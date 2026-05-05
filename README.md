@@ -1,63 +1,59 @@
 # complexidade-cognitiva-ptbr
 
-Projeto acadêmico desenvolvido para estudo, implementação e validação de uma abordagem computacional voltada à estimação automática da complexidade cognitiva em textos literários em português, utilizando Processamento de Linguagem Natural e Aprendizado de Máquina.
+Pipeline acadêmico em Python para preparação de dados, extração de atributos linguísticos, treinamento, comparação e avaliação de modelos supervisionados voltados à estimação automática da complexidade cognitiva em textos literários em português.
+
+Este repositório faz parte do TCC **Avaliação Automática de Complexidade Cognitiva em Textos Literários na Língua Portuguesa utilizando Processamento de Linguagem Natural e Aprendizado de Máquina**. O projeto combina métricas linguísticas interpretáveis e representações textuais, como TF-IDF, para classificar textos em níveis de complexidade cognitiva e gerar artefatos úteis para análise acadêmica.
 
 ## Objetivo
 
-Este repositório concentra a etapa de treinamento, experimentação e avaliação do projeto de TCC. O foco é investigar como métricas linguísticas interpretáveis e representações textuais podem contribuir para classificar automaticamente textos literários em níveis de complexidade cognitiva.
+Desenvolver e avaliar uma abordagem computacional capaz de classificar textos literários em níveis de complexidade cognitiva a partir de um corpus textual rotulado.
 
 O pipeline foi planejado para:
 
-- ler e validar um corpus textual rotulado;
-- aplicar pré-processamento textual controlado;
+- ler e validar um dataset textual em CSV;
+- aplicar pré-processamento textual controlado e reprodutível;
+- dividir o corpus em treino, validação e teste;
 - extrair métricas linguísticas interpretáveis;
-- gerar representações numéricas dos textos;
+- construir representações numéricas dos textos;
 - treinar modelos supervisionados de classificação;
-- comparar experimentos;
+- comparar experimentos em conjunto de validação;
 - selecionar objetivamente o melhor modelo;
 - avaliar o melhor modelo no conjunto de teste;
-- gerar métricas finais, matriz de confusão, predições e relatório acadêmico.
+- gerar métricas, predições, matriz de confusão e relatório final para apoio ao TCC.
 
 ## Escopo
 
-Este repositório contempla somente a parte local de treinamento e validação experimental.
+Este repositório cobre a etapa local de treinamento, experimentação e avaliação do projeto.
 
-Não fazem parte deste escopo:
+Ficam fora do escopo deste repositório:
 
 - API;
 - interface web;
 - banco de dados;
-- dependência obrigatória de cloud;
-- deploy em produção.
+- deploy em cloud;
+- execução como serviço de produção.
 
-## Dados esperados
+## Requisitos
 
-O dataset de entrada deve estar em `data/raw/dataset.csv` e conter, no mínimo, as colunas:
+- Python 3.11 ou superior compatível com as dependências do projeto;
+- ambiente virtual Python;
+- dataset CSV em UTF-8;
+- dependências instaladas via `requirements.txt` ou `pyproject.toml`.
 
-| Coluna | Descrição |
-| --- | --- |
-| `id` | Identificador único do texto |
-| `texto` | Conteúdo textual a ser analisado |
-| `target` | Classe de complexidade cognitiva atribuída ao texto |
+Dependências principais:
 
-O problema é tratado como classificação supervisionada multiclasse.
-
-## Stack principal
-
-- Python 3.11
-- pandas
-- numpy
-- scikit-learn
-- nltk
-- matplotlib
-- PyYAML
-- joblib
-- pytest
+- pandas;
+- numpy;
+- scikit-learn;
+- matplotlib;
+- PyYAML;
+- joblib;
+- pytest.
 
 ## Estrutura do projeto
 
 ```text
-COMPLEXIDADE-COGNITIVA-PTBR/
+complexidade-cognitiva-ptbr/
 ├── configs/
 │   └── config.yaml
 ├── data/
@@ -100,26 +96,87 @@ COMPLEXIDADE-COGNITIVA-PTBR/
 │           ├── __init__.py
 │           ├── logging_utils.py
 │           └── paths.py
+├── tests/
+├── .gitignore
 ├── README.md
 ├── pyproject.toml
 └── requirements.txt
 ```
 
+## Dataset de entrada
+
+O dataset bruto oficial deve ficar em:
+
+```text
+data/raw/dataset.csv
+```
+
+Por padrão, o CSV deve conter as seguintes colunas:
+
+| Coluna | Obrigatória | Descrição |
+| --- | --- | --- |
+| `id` | Sim | Identificador único do texto. |
+| `texto` | Sim | Texto literário a ser analisado. |
+| `target` | Sim | Classe de complexidade cognitiva atribuída ao texto. |
+
+O problema é tratado como classificação supervisionada multiclasse.
+
+### Regras principais de validação
+
+- o arquivo deve ser CSV;
+- o arquivo deve estar em UTF-8;
+- as colunas obrigatórias não podem estar ausentes;
+- `id`, `texto` e `target` não podem conter valores nulos ou vazios;
+- `id` deve ser único;
+- o dataset precisa ter pelo menos duas classes distintas;
+- textos que ficarem vazios após a limpeza são rejeitados;
+- a divisão precisa gerar conjuntos não vazios de treino, validação e teste.
+
+## Configuração
+
+A configuração central fica em:
+
+```text
+configs/config.yaml
+```
+
+Ela controla:
+
+- metadados do projeto;
+- caminho do dataset bruto;
+- nomes das colunas obrigatórias;
+- proporções de treino, validação e teste;
+- uso de estratificação;
+- opções de limpeza textual;
+- diretório de features;
+- parâmetros de TF-IDF;
+- modelos supervisionados habilitados;
+- representações textuais avaliadas;
+- métrica usada para selecionar o melhor experimento;
+- diretórios de saída;
+- formato e nível de logging.
+
+Antes de rodar o pipeline completo, valide configuração, logging e diretórios:
+
+```bash
+python scripts/run_pipeline.py --bootstrap-only
+```
+
 ## Instalação
 
-Crie e ative um ambiente virtual:
+Crie o ambiente virtual:
 
 ```bash
 python -m venv .venv
 ```
 
-No Windows:
+Ative o ambiente no Windows:
 
 ```bash
 .venv\Scripts\activate
 ```
 
-No Linux/macOS:
+Ative o ambiente no Linux ou macOS:
 
 ```bash
 source .venv/bin/activate
@@ -131,171 +188,188 @@ Instale as dependências:
 pip install -r requirements.txt
 ```
 
-Opcionalmente, instale o pacote em modo editável:
+## Execução do pipeline
 
-```bash
-pip install -e .
-```
+Execute as etapas individualmente na ordem abaixo.
 
-## Execução
-
-Coloque o dataset bruto em:
-
-```text
-data/raw/dataset.csv
-```
-
-Execute a preparação dos dados:
+### 1. Preparação dos dados
 
 ```bash
 python scripts/prepare_dataset.py
 ```
 
-Execute a extração de features linguísticas:
+Arquivos gerados:
+
+- `data/processed/train.csv`;
+- `data/processed/val.csv`;
+- `data/processed/test.csv`;
+- `data/processed/preparation_report.json`.
+
+### 2. Extração de features linguísticas
 
 ```bash
 python scripts/build_features.py
 ```
 
-Execute o treinamento e a seleção do melhor experimento:
+Arquivos gerados:
+
+- `data/processed/features/train_features.csv`;
+- `data/processed/features/val_features.csv`;
+- `data/processed/features/test_features.csv`;
+- `data/processed/features/features_metadata.json`.
+
+### 3. Treinamento e seleção do melhor modelo
 
 ```bash
 python scripts/train_model.py
 ```
 
-Execute a avaliação final no conjunto de teste:
+Arquivos gerados:
+
+- `outputs/models/best_model.joblib`;
+- `outputs/models/best_experiment.json`;
+- `outputs/models/experiment_results.csv`.
+
+### 4. Avaliação final
 
 ```bash
 python scripts/evaluate_model.py
 ```
 
-Ou execute o pipeline disponível:
+Arquivos gerados:
+
+- `outputs/metrics/final_metrics.json`;
+- `outputs/metrics/classification_report.json`;
+- `outputs/metrics/classification_report.txt`;
+- `outputs/metrics/test_predictions.csv`;
+- `outputs/figures/confusion_matrix.png`;
+- `outputs/reports/final_report.md`.
+
+### Execução completa
 
 ```bash
 python scripts/run_pipeline.py
 ```
 
-Para validar apenas configuração, logging e diretórios, sem exigir dataset:
+## Execução com configuração alternativa
+
+Todos os scripts aceitam o argumento `--config`:
 
 ```bash
-python scripts/run_pipeline.py --bootstrap-only
+python scripts/run_pipeline.py --config configs/config.yaml
 ```
 
-## Etapas implementadas
+Exemplo com outro arquivo de configuração:
 
-### 1. Preparação dos dados
+```bash
+python scripts/run_pipeline.py --config configs/config-experimento.yaml
+```
 
-A etapa de preparação lê o CSV bruto, valida a estrutura mínima, limpa os textos de forma controlada e gera os subconjuntos:
+## Representações suportadas
 
-- `data/processed/train.csv`
-- `data/processed/val.csv`
-- `data/processed/test.csv`
-- `data/processed/preparation_report.json`
+As representações disponíveis dependem da configuração, mas o pipeline suporta:
 
-### 2. Extração de features linguísticas
+| Representação | Descrição |
+| --- | --- |
+| `linguistic_metrics` | Usa apenas métricas linguísticas interpretáveis. |
+| `tfidf_word` | Usa TF-IDF baseado em palavras. |
+| `tfidf_char` | Usa TF-IDF baseado em caracteres. |
+| `tfidf_word_plus_linguistic_metrics` | Combina TF-IDF de palavras com métricas linguísticas. |
 
-A etapa de features gera métricas interpretáveis por texto, incluindo contagens estruturais, diversidade lexical, razão de pontuação, razão de números, conectivos, marcadores de subordinação e densidade lexical aproximada.
+## Modelos suportados
 
-Arquivos gerados:
+| Modelo | Identificador de configuração |
+| --- | --- |
+| Regressão Logística | `logistic_regression` |
+| Linear SVM | `linear_svm` |
+| Random Forest | `random_forest` |
 
-- `data/processed/features/train_features.csv`
-- `data/processed/features/val_features.csv`
-- `data/processed/features/test_features.csv`
-- `data/processed/features/features_metadata.json`
+## Métricas calculadas
 
-### 3. Treinamento e seleção de modelos
+O pipeline calcula as seguintes métricas em validação e teste:
 
-A etapa de treinamento compara experimentos usando combinações entre representações e modelos supervisionados.
+- `accuracy`;
+- `precision_macro`;
+- `recall_macro`;
+- `f1_macro`;
+- `f1_weighted`;
+- `balanced_accuracy`.
 
-Representações suportadas:
+A seleção do melhor experimento usa a métrica definida em `training.selection_metric` no arquivo `configs/config.yaml`.
 
-- métricas linguísticas;
-- TF-IDF de palavras;
-- TF-IDF de caracteres;
-- TF-IDF de palavras combinado com métricas linguísticas.
+## Testes
 
-Modelos suportados:
+Execute a suíte de testes com:
 
-- Regressão Logística;
-- Linear SVM;
-- Random Forest.
+```bash
+pytest -q
+```
 
-Métricas calculadas em validação:
+Os testes cobrem:
 
-- accuracy;
-- precision macro;
-- recall macro;
-- f1 macro;
-- f1 weighted;
-- balanced accuracy.
+- leitura e validação de configurações;
+- criação de diretórios gerenciados;
+- limpeza textual;
+- validação do dataset;
+- divisão em treino, validação e teste;
+- extração de métricas linguísticas;
+- treinamento mínimo;
+- avaliação final e geração de artefatos.
 
-Arquivos gerados:
+## Versionamento no Git
 
-- `outputs/models/best_model.joblib`
-- `outputs/models/best_experiment.json`
-- `outputs/models/experiment_results.csv`
+Este repositório foi organizado para uso acadêmico no TCC. A regra principal é manter versionado tudo que permite reproduzir o experimento e deixar fora do Git aquilo que é gerado automaticamente, sensível ou pesado.
 
-### 4. Avaliação final e geração de artefatos
+## Organização acadêmica dos artefatos
 
-A etapa de avaliação carrega o melhor modelo selecionado, aplica o pipeline ao conjunto de teste e gera arquivos finais para análise acadêmica.
+Os artefatos finais apoiam o capítulo de Resultados e Discussão do TCC:
 
-Métricas calculadas no teste:
+| Artefato | Finalidade acadêmica |
+| --- | --- |
+| `data/processed/preparation_report.json` | Descreve validação, limpeza e divisão dos dados |
+| `data/processed/features/features_metadata.json` | Documenta as métricas linguísticas geradas |
+| `outputs/models/experiment_results.csv` | Compara os experimentos treinados |
+| `outputs/models/best_experiment.json` | Registra o melhor experimento selecionado |
+| `outputs/metrics/final_metrics.json` | Consolida as métricas finais no conjunto de teste |
+| `outputs/metrics/classification_report.json` | Detalha precisão, revocação e F1 por classe |
+| `outputs/metrics/classification_report.txt` | Registra o relatório textual de classificação |
+| `outputs/metrics/test_predictions.csv` | Registra predições individuais no conjunto de teste |
+| `outputs/figures/confusion_matrix.png` | Ilustra erros e acertos por classe |
+| `outputs/reports/final_report.md` | Resume a avaliação final em formato textual |
 
-- accuracy;
-- precision macro;
-- recall macro;
-- f1 macro;
-- f1 weighted;
-- balanced accuracy.
+## Fluxo recomendado de desenvolvimento
 
-Arquivos gerados:
+1. Ajustar `configs/config.yaml`;
+2. validar estrutura com `python scripts/run_pipeline.py --bootstrap-only`;
+3. inserir o dataset oficial em `data/raw/dataset.csv`;
+4. rodar `python scripts/prepare_dataset.py`;
+5. rodar `python scripts/build_features.py`;
+6. rodar `python scripts/train_model.py`;
+7. rodar `python scripts/evaluate_model.py`;
+8. executar `pytest -q`;
+9. revisar os artefatos gerados em `data/processed/` e `outputs/`;
+10. selecionar os artefatos relevantes para uso no capítulo de Resultados e Discussão.
 
-- `outputs/metrics/final_metrics.json`
-- `outputs/metrics/classification_report.json`
-- `outputs/metrics/classification_report.txt`
-- `outputs/metrics/test_predictions.csv`
-- `outputs/figures/confusion_matrix.png`
-- `outputs/reports/final_report.md`
+## Solução de problemas
 
-## Configuração
+### Dataset não encontrado
 
-A configuração central fica em:
+Confirme se o arquivo existe em:
 
 ```text
-configs/config.yaml
+data/raw/dataset.csv
 ```
 
-Ela concentra parâmetros de projeto, dataset, split, features, representações, modelos, critério de seleção e diretórios de saída.
+Ou ajuste `dataset.input_path` em `configs/config.yaml`.
 
-## Artefatos gerados pelo pipeline
+### Split estratificado falhou
 
-A execução completa do pipeline deverá gerar:
+Quando há poucas amostras por classe, a estratificação pode ser inviável. Nesse caso, aumente o dataset, reduza o número de classes ou ajuste as proporções de treino, validação e teste.
 
-- `data/processed/train.csv`
-- `data/processed/val.csv`
-- `data/processed/test.csv`
-- `data/processed/preparation_report.json`
-- `data/processed/features/train_features.csv`
-- `data/processed/features/val_features.csv`
-- `data/processed/features/test_features.csv`
-- `data/processed/features/features_metadata.json`
-- `outputs/models/best_model.joblib`
-- `outputs/models/best_experiment.json`
-- `outputs/models/experiment_results.csv`
-- `outputs/metrics/final_metrics.json`
-- `outputs/metrics/classification_report.json`
-- `outputs/metrics/classification_report.txt`
-- `outputs/metrics/test_predictions.csv`
-- `outputs/figures/confusion_matrix.png`
-- `outputs/reports/final_report.md`
+### TF-IDF sem vocabulário
 
-## Organização do desenvolvimento
+Esse erro costuma ocorrer quando os textos estão vazios, muito curtos ou quando `min_df` está alto demais para o tamanho do dataset. Revise os textos limpos e os parâmetros de TF-IDF no YAML.
 
-O desenvolvimento do repositório segue blocos progressivos:
+## Observação sobre uso acadêmico
 
-1. estrutura base;
-2. preparação dos dados;
-3. extração de features linguísticas;
-4. treinamento e seleção de modelos;
-5. avaliação final e geração de artefatos;
-6. testes, revisão e endurecimento.
+O pipeline não substitui a interpretação teórica do conceito de complexidade cognitiva. Portanto, ele fornece uma base computacional reprodutível para apoiar a análise experimental do TCC, permitindo comparar modelos, observar métricas linguísticas e discutir resultados quantitativos de forma documentada.
