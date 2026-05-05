@@ -1,11 +1,15 @@
-# Python
+# Bytecode / caches Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyo
+*.pyd
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.pyre/
 .coverage
+.coverage.*
 htmlcov/
 
 # Ambientes virtuais
@@ -14,99 +18,63 @@ venv/
 env/
 ENV/
 
-# IDEs e sistema operacional
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-
-# Dados e artefatos gerados
-data/raw/*.csv
-data/raw/*.xlsx
-data/raw/*.json
-data/processed/*.csv
-data/processed/*.json
-data/processed/features/*.csv
-data/processed/features/*.json
-outputs/models/*
-outputs/metrics/*
-outputs/figures/*
-outputs/reports/*
-
-# Mantém a estrutura versionável
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-!data/processed/features/.gitkeep
-!outputs/models/.gitkeep
-!outputs/metrics/.gitkeep
-!outputs/figures/.gitkeep
-!outputs/reports/.gitkeep
-
-# Notebooks
-.ipynb_checkpoints/
-
-# Ambiente virtual
-.venv/
-venv/
-env/
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.pyo
-*.pyd
-
 # Build / distribuição
 build/
 dist/
 *.egg-info/
 .eggs/
 
-# Logs
-*.log
-
-# Configurações locais
+# Configurações locais e segredos
 .env
 .env.*
+!.env.example
 *.local
 
-# Jupyter Notebook
-.ipynb_checkpoints/
+# Logs e temporários
+*.log
+.cache/
+temp/
+tmp/
 
-# VS Code / IDEs
+# IDEs e sistema operacional
 .vscode/
 .idea/
-
-# Sistema operacional
 .DS_Store
 Thumbs.db
 
-# Testes / cobertura
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
+# Jupyter
+.ipynb_checkpoints/
 
-# Ferramentas estáticas
-.mypy_cache/
-.ruff_cache/
-.pyre/
+# Dados brutos
+# Para o TCC, o dataset sintético/curado oficial pode ser versionado.
+# Qualquer outro dado bruto local, privado ou pesado deve ficar fora do Git.
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/dataset.csv
+!data/raw/dataset_summary.json
 
-# Modelos e artefatos gerados
-outputs/models/
-outputs/metrics/
-outputs/figures/
+# Dados externos/intermediários/gerados
+data/external/*
+!data/external/.gitkeep
+data/interim/*
+!data/interim/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+!data/processed/features/
+data/processed/features/*
+!data/processed/features/.gitkeep
 
-# Dados locais
-data/raw/
-data/processed/
-data/external/
+# Artefatos gerados pelo pipeline
+outputs/models/*
+!outputs/models/.gitkeep
+outputs/metrics/*
+!outputs/metrics/.gitkeep
+outputs/figures/*
+!outputs/figures/.gitkeep
+outputs/reports/*
+!outputs/reports/.gitkeep
 
-# Arquivos pesados comuns
-*.csv
-*.xlsx
-*.parquet
+# Modelos e binários pesados gerados localmente
 *.joblib
 *.pkl
 *.pickle
@@ -115,7 +83,7 @@ data/external/
 *.pth
 *.onnx
 
-# Seeds temporários / caches
-.cache/
-temp/
-tmp/
+# Arquivos tabulares grandes gerados fora do dataset oficial
+*.parquet
+*.feather
+*.arrow
