@@ -57,39 +57,52 @@ O problema é tratado como classificação supervisionada multiclasse.
 ## Estrutura do projeto
 
 ```text
-complexidade-cognitiva-ptbr/
+COMPLEXIDADE-COGNITIVA-PTBR/
 ├── configs/
 │   └── config.yaml
 ├── data/
 │   ├── raw/
+│   │   └── dataset.csv
 │   └── processed/
 │       └── features/
-├── notebooks/
 ├── outputs/
-│   ├── models/
-│   ├── metrics/
 │   ├── figures/
+│   ├── metrics/
+│   ├── models/
 │   └── reports/
 ├── scripts/
-│   ├── prepare_dataset.py
 │   ├── build_features.py
-│   ├── train_model.py
 │   ├── evaluate_model.py
-│   └── run_pipeline.py
+│   ├── prepare_dataset.py
+│   ├── run_pipeline.py
+│   └── train_model.py
 ├── src/
 │   └── complexidade_cognitiva_ptbr/
+│       ├── __init__.py
+│       ├── pipeline.py
 │       ├── config/
+│       │   ├── __init__.py
+│       │   └── settings.py
 │       ├── data/
-│       ├── features/
-│       ├── models/
+│       │   ├── __init__.py
+│       │   ├── io.py
+│       │   └── preprocessing.py
 │       ├── evaluation/
-│       ├── utils/
-│       └── pipeline.py
-├── tests/
+│       │   ├── __init__.py
+│       │   └── reporting.py
+│       ├── features/
+│       │   ├── __init__.py
+│       │   └── build_features.py
+│       ├── models/
+│       │   ├── __init__.py
+│       │   └── train.py
+│       └── utils/
+│           ├── __init__.py
+│           ├── logging_utils.py
+│           └── paths.py
+├── README.md
 ├── pyproject.toml
-├── requirements.txt
-├── .gitignore
-└── README.md
+└── requirements.txt
 ```
 
 ## Instalação
