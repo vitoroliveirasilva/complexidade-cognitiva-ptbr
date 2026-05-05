@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from ..src.complexidade_cognitiva_ptbr.features.build_features import (
+from complexidade_cognitiva_ptbr.features.build_features import (
     FeatureBuildError,
     build_feature_datasets,
     build_features_dataframe,

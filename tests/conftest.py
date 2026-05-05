@@ -28,7 +28,7 @@ _MPLCONFIGDIR.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("MPLBACKEND", "Agg")
 os.environ.setdefault("MPLCONFIGDIR", str(_MPLCONFIGDIR))
 
-from ..src.complexidade_cognitiva_ptbr.config.settings import (
+from complexidade_cognitiva_ptbr.config.settings import (
     AppSettings,
     DatasetConfig,
     FeaturesConfig,
@@ -40,11 +40,11 @@ from ..src.complexidade_cognitiva_ptbr.config.settings import (
     TfidfVectorizerConfig,
     TrainingConfig,
 )
-from ..src.complexidade_cognitiva_ptbr.data.preprocessing import prepare_dataset
-from ..src.complexidade_cognitiva_ptbr.features.build_features import (
+from complexidade_cognitiva_ptbr.data.preprocessing import prepare_dataset
+from complexidade_cognitiva_ptbr.features.build_features import (
     build_feature_datasets,
 )
-from ..src.complexidade_cognitiva_ptbr.models.train import train_model
+from complexidade_cognitiva_ptbr.models.train import train_model
 
 
 # Retorna um corpus sintético pequeno, balanceado e determinístico

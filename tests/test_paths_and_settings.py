@@ -5,11 +5,11 @@ from textwrap import dedent
 
 import pytest
 
-from ..src.complexidade_cognitiva_ptbr.config.settings import (
+from complexidade_cognitiva_ptbr.config.settings import (
     SettingsError,
     load_settings,
 )
-from ..src.complexidade_cognitiva_ptbr.utils.paths import (
+from complexidade_cognitiva_ptbr.utils.paths import (
     ensure_dir,
     ensure_project_directories,
     find_project_root,

@@ -4,7 +4,7 @@ import json
 
 import pandas as pd
 
-from ..src.complexidade_cognitiva_ptbr.data.preprocessing import prepare_dataset
+from complexidade_cognitiva_ptbr.data.preprocessing import prepare_dataset
 
 
 def test_prepare_dataset_writes_splits_and_report(

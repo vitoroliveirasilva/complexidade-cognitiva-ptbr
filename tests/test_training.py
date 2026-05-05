@@ -6,8 +6,8 @@ from dataclasses import replace
 import pandas as pd
 import pytest
 
-from ..src.complexidade_cognitiva_ptbr.features.build_features import get_feature_columns
-from ..src.complexidade_cognitiva_ptbr.models.train import (
+from complexidade_cognitiva_ptbr.features.build_features import get_feature_columns
+from complexidade_cognitiva_ptbr.models.train import (
     TrainingError,
     compute_classification_metrics,
     merge_prepared_and_features,

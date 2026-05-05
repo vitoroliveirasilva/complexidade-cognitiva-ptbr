@@ -5,7 +5,7 @@ import json
 import pandas as pd
 import pytest
 
-from ..src.complexidade_cognitiva_ptbr.evaluation.reporting import (
+from complexidade_cognitiva_ptbr.evaluation.reporting import (
     EvaluationError,
     build_predictions_dataframe,
     compute_final_metrics,

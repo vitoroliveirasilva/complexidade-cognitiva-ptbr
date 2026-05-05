@@ -5,7 +5,7 @@ from dataclasses import replace
 import pandas as pd
 import pytest
 
-from ..src.complexidade_cognitiva_ptbr.data.preprocessing import (
+from complexidade_cognitiva_ptbr.data.preprocessing import (
     DatasetValidationError,
     build_preprocessed_dataset,
     clean_text,
