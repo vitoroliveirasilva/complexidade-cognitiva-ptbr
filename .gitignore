@@ -1,3 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+ENV/
+
+# IDEs e sistema operacional
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Dados e artefatos gerados
+data/raw/*.csv
+data/raw/*.xlsx
+data/raw/*.json
+data/processed/*.csv
+data/processed/*.json
+data/processed/features/*.csv
+data/processed/features/*.json
+outputs/models/*
+outputs/metrics/*
+outputs/figures/*
+outputs/reports/*
+
+# Mantém a estrutura versionável
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/processed/features/.gitkeep
+!outputs/models/.gitkeep
+!outputs/metrics/.gitkeep
+!outputs/figures/.gitkeep
+!outputs/reports/.gitkeep
+
+# Notebooks
+.ipynb_checkpoints/
+
 # Ambiente virtual
 .venv/
 venv/
