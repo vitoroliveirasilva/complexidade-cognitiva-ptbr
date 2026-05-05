@@ -2,20 +2,19 @@
 
 ## Identificação
 
-- **Nome do arquivo:** `data/raw/dataset.csv`
+- **Arquivo:** `data/raw/dataset.csv`
 - **Projeto:** `complexidade-cognitiva-ptbr`
 - **Versão do projeto:** `0.1.0`
-- **Tipo de tarefa:** classificação supervisionada multiclasse
 - **Idioma:** português brasileiro
-- **Domínio:** textos literários curtos e trechos narrativos voltados à avaliação experimental de complexidade cognitiva
-- **Classes:** `baixa`, `media` e `alta`
-- **Codificação recomendada:** UTF-8 ou UTF-8 com BOM
+- **Tarefa:** classificação supervisionada multiclasse
+- **Classes:** `alta`, `baixa` e `media`
+- **Domínio experimental:** textos literários curtos e trechos narrativos voltados à avaliação de complexidade cognitiva
 
-## Finalidade do dataset
+## Finalidade
 
-Este dataset foi organizado para apoiar a validação inicial de um pipeline acadêmico de Processamento de Linguagem Natural e Aprendizado de Máquina para estimação automática da complexidade cognitiva em textos literários em português.
+O dataset foi usado para validar um pipeline acadêmico de Processamento de Linguagem Natural e Aprendizado de Máquina voltado à estimação automática de níveis de complexidade cognitiva em textos literários em português.
 
-A base permite exercitar, de forma reprodutível, as etapas de validação do corpus, limpeza textual, extração de métricas linguísticas interpretáveis, treinamento supervisionado, comparação de experimentos e avaliação final.
+A base permite executar, de forma reprodutível, as etapas de validação, limpeza textual, extração de métricas linguísticas interpretáveis, treinamento supervisionado, comparação de experimentos e avaliação final.
 
 ## Composição
 
@@ -23,52 +22,49 @@ A base permite exercitar, de forma reprodutível, as etapas de validação do co
 - **Colunas:** `id`, `texto`, `target`
 - **Distribuição de classes:**
 
-- `alta`: 3000 exemplos
-- `baixa`: 3000 exemplos
-- `media`: 3000 exemplos
+| Classe | Quantidade |
+| --- | ---: |
+| `alta` | 3000 |
+| `baixa` | 3000 |
+| `media` | 3000 |
 
-A distribuição balanceada foi adotada para reduzir o impacto de desbalanceamento durante os experimentos iniciais e facilitar a comparação entre modelos.
+A distribuição balanceada reduz o impacto do desbalanceamento entre classes nos experimentos iniciais e facilita a comparação entre modelos.
 
 ## Descrição das colunas
 
 | Coluna | Tipo esperado | Obrigatória | Descrição |
 | --- | --- | --- | --- |
-| `id` | inteiro ou texto identificador | Sim | Identificador único de cada texto |
-| `texto` | texto | Sim | Conteúdo textual analisado pelo pipeline |
-| `target` | categoria | Sim | Classe de complexidade cognitiva atribuída ao texto |
+| `id` | inteiro ou texto identificador | Sim | Identificador único de cada texto. |
+| `texto` | texto | Sim | Conteúdo textual analisado pelo pipeline. |
+| `target` | categoria | Sim | Classe de complexidade cognitiva atribuída ao texto. |
 
-## Estatísticas textuais observadas
+## Validações aplicadas
 
-| Métrica | Valor |
-| --- | ---: |
-| Mínimo de palavras | 10 |
-| Média de palavras | 35.65 |
-| Mediana de palavras | 39.0 |
-| Máximo de palavras | 73 |
-| Mínimo de caracteres | 48 |
-| Média de caracteres | 229.56 |
-| Mediana de caracteres | 258.0 |
-| Máximo de caracteres | 474 |
+Na execução oficial, o pipeline verificou:
 
-## Critérios de validação aplicados pelo pipeline
+- existência e leitura do CSV configurado;
+- presença das colunas obrigatórias;
+- ausência de valores nulos em `id`, `texto` e `target`;
+- ausência de campos obrigatórios vazios;
+- unicidade da coluna `id`;
+- existência de pelo menos duas classes;
+- ausência de duplicidade textual exata;
+- ausência de duplicidade textual normalizada;
+- integridade dos textos após a limpeza;
+- possibilidade de divisão em treino, validação e teste.
 
-Durante a etapa de preparação, o pipeline verifica se:
+## Resultado da validação
 
-- o arquivo existe no caminho configurado;
-- o arquivo está em formato CSV;
-- as colunas obrigatórias estão presentes;
-- os campos `id`, `texto` e `target` não possuem valores nulos;
-- os campos obrigatórios não possuem valores vazios;
-- a coluna `id` não possui duplicidade;
-- existem pelo menos duas classes distintas;
-- os textos não ficam vazios após a limpeza;
-- a divisão entre treino, validação e teste gera subconjuntos não vazios.
-
-Na execução oficial registrada, não foram encontrados valores nulos, campos obrigatórios vazios, textos duplicados exatos ou avisos relevantes.
+| Item | Resultado |
+| --- | --- |
+| Valores nulos em colunas obrigatórias | Não encontrados |
+| Campos obrigatórios vazios | Não encontrados |
+| Textos duplicados exatos | Não encontrados |
+| Textos duplicados normalizados | Não encontrados |
+| Textos vazios após limpeza | Não encontrados |
+| Avisos relevantes | Não registrados |
 
 ## Divisão experimental
-
-A divisão configurada foi:
 
 | Subconjunto | Proporção | Registros | Distribuição por classe |
 | --- | ---: | ---: | --- |
@@ -76,26 +72,24 @@ A divisão configurada foi:
 | Validação | 15% | 1350 | 450 por classe |
 | Teste | 15% | 1350 | 450 por classe |
 
-A estratificação foi aplicada com sucesso, mantendo a distribuição balanceada das classes nos três subconjuntos.
-
-## Limitações conhecidas
-
-O dataset utilizado nesta etapa deve ser interpretado como base sintética, curada ou controlada para validação experimental inicial do pipeline. Métricas muito elevadas, especialmente resultados perfeitos, indicam que os padrões entre classes podem estar fortemente separáveis no conjunto atual.
-
-Assim, os resultados devem ser apresentados no TCC como evidência de funcionamento e reprodutibilidade do método, não como comprovação definitiva de generalização para qualquer texto literário real.
+A estratificação foi aplicada com sucesso e manteve o balanceamento das classes nos três subconjuntos.
 
 ## Uso recomendado
 
-Este dataset é adequado para:
+O dataset é adequado para:
 
-- validar a arquitetura do pipeline;
-- testar o fluxo completo de treino e avaliação;
-- comparar representações e modelos em ambiente controlado;
+- validar o funcionamento do pipeline;
+- testar a extração de métricas linguísticas;
+- comparar modelos supervisionados em cenário controlado;
 - gerar artefatos acadêmicos iniciais;
 - apoiar a escrita do capítulo de Resultados e Discussão.
 
-Para trabalhos futuros, recomenda-se complementar esta base com corpus real rotulado, revisão humana dos rótulos e validação externa em textos não gerados ou não curados pela mesma estratégia de construção.
+## Limitações do dataset
+
+O dataset deve ser interpretado como sintético, curado ou controlado. Assim, resultados muito elevados indicam que as classes possuem sinais lexicais e estruturais fortemente separáveis.
+
+Para generalização acadêmica mais ampla, recomenda-se complementar esta base com textos literários reais, rótulos revisados por avaliadores profissionais e validação externa em corpus independente.
 
 ## Considerações éticas e de reprodutibilidade
 
-Caso o dataset oficial do TCC seja mantido no repositório, ele deve conter apenas textos autorizados, sintéticos, de domínio público ou adequadamente licenciados. Datasets privados, sensíveis ou sujeitos a restrição autoral não devem ser versionados publicamente.
+Caso o dataset seja versionado publicamente, ele deve conter apenas textos sintéticos, autorizados, de domínio público ou adequadamente licenciados. Dados privados, sensíveis ou protegidos por restrições autorais não devem ser publicados no repositório.

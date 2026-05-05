@@ -2,36 +2,32 @@
 
 ## Visão geral
 
-Este documento descreve a metodologia experimental adotada no projeto `complexidade-cognitiva-ptbr`, cujo objetivo é desenvolver e avaliar um pipeline de PLN e Aprendizado de Máquina para classificar textos literários em níveis de complexidade cognitiva.
-
-A metodologia foi organizada para garantir rastreabilidade, reprodutibilidade e separação adequada entre preparação dos dados, extração de atributos, treinamento, seleção de modelo e avaliação final.
+Este documento descreve a metodologia experimental adotada no projeto `complexidade-cognitiva-ptbr`. O objetivo é documentar o protocolo usado para preparar dados, extrair atributos, treinar modelos, selecionar o melhor experimento e avaliar o desempenho final.
 
 ## Objetivo experimental
 
-Avaliar se diferentes representações textuais permitem classificar automaticamente textos em três níveis de complexidade cognitiva:
+Avaliar se representações textuais e métricas linguísticas permitem classificar automaticamente textos em três níveis de complexidade cognitiva:
 
 - `baixa`;
 - `media`;
 - `alta`.
 
-A abordagem compara métricas linguísticas interpretáveis, representações TF-IDF e combinações entre elas.
-
 ## Arquitetura do pipeline
 
-O pipeline é composto por quatro etapas principais:
+A execução experimental foi organizada em quatro etapas:
 
-1. **Preparação dos dados**: leitura, validação, limpeza textual e divisão do dataset.
-2. **Extração de features**: geração de métricas linguísticas interpretáveis para cada texto.
-3. **Treinamento e seleção**: comparação de combinações entre representações e modelos supervisionados.
-4. **Avaliação final**: aplicação do melhor modelo ao conjunto de teste e geração dos artefatos acadêmicos.
+1. **Preparação dos dados:** leitura do CSV, validação estrutural, limpeza textual e divisão em treino, validação e teste.
+2. **Extração de features:** cálculo de métricas linguísticas interpretáveis para cada texto.
+3. **Treinamento e seleção:** comparação de modelos e representações usando o conjunto de validação.
+4. **Avaliação final:** aplicação do melhor modelo ao conjunto de teste e geração de métricas e relatórios.
 
-A execução completa pode ser realizada por:
+A execução completa é realizada com:
 
 ```bash
 python scripts/run_pipeline.py
 ```
 
-A validação estrutural isolada pode ser realizada por:
+A validação estrutural isolada é realizada com:
 
 ```bash
 python scripts/run_pipeline.py --bootstrap-only
@@ -39,14 +35,14 @@ python scripts/run_pipeline.py --bootstrap-only
 
 ## Configuração experimental
 
-A configuração central fica em `configs/config.yaml`. Ela concentra os parâmetros do experimento, incluindo:
+A configuração central do experimento fica em `configs/config.yaml`. Ela controla:
 
 - caminho do dataset bruto;
 - nomes das colunas obrigatórias;
 - proporções de treino, validação e teste;
 - uso de estratificação;
-- coluna de texto limpo;
-- parâmetros das métricas linguísticas;
+- opções de limpeza textual;
+- parâmetros de métricas linguísticas;
 - parâmetros de TF-IDF;
 - modelos avaliados;
 - representações avaliadas;
@@ -62,61 +58,52 @@ O dataset bruto foi lido a partir de:
 data/raw/dataset.csv
 ```
 
-A etapa de preparação validou:
+A execução oficial processou 9000 registros. A etapa de preparação validou a estrutura mínima do arquivo, a ausência de nulos, a ausência de campos obrigatórios vazios, a unicidade de identificadores e a integridade dos textos após limpeza.
 
-- existência do arquivo;
-- formato CSV;
-- presença das colunas `id`, `texto` e `target`;
-- ausência de valores nulos;
-- ausência de campos obrigatórios vazios;
-- unicidade do identificador;
-- existência de múltiplas classes;
-- integridade dos textos após limpeza.
-
-A limpeza textual foi controlada, preservando o texto original e criando a coluna `texto_limpo`. A divisão dos dados usou `random_state = 42` e estratificação.
+A limpeza textual preservou o texto original e criou a coluna `texto_limpo`.
 
 ## Divisão dos dados
 
-| Subconjunto | Proporção | Quantidade | Classe `alta` | Classe `baixa` | Classe `media` |
+| Subconjunto | Proporção | Quantidade | `alta` | `baixa` | `media` |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Treino | 70% | 6300 | 2100 | 2100 | 2100 |
 | Validação | 15% | 1350 | 450 | 450 | 450 |
 | Teste | 15% | 1350 | 450 | 450 | 450 |
 
-A estratificação manteve o balanceamento entre as classes em todos os subconjuntos.
+A divisão usou `random_state = 42` e estratificação por classe.
 
 ## Métricas linguísticas interpretáveis
 
-Foram extraídas 17 métricas linguísticas aproximadas:
+Foram extraídas 17 métricas linguísticas:
 
-1. número de caracteres;
-2. número de palavras;
-3. número de sentenças;
-4. média de palavras por sentença;
-5. média de caracteres por palavra;
-6. comprimento da maior sentença;
-7. variância do tamanho das sentenças;
-8. quantidade de palavras únicas;
-9. type-token ratio;
-10. diversidade lexical;
-11. razão de palavras longas;
-12. razão de palavras repetidas;
-13. razão de pontuação;
-14. razão de números;
-15. frequência de conectivos;
-16. frequência de marcadores de subordinação;
-17. densidade lexical aproximada.
+1. `num_caracteres`: Quantidade total de caracteres do texto limpo.
+2. `num_palavras`: Quantidade total de tokens lexicais identificados no texto.
+3. `num_sentencas`: Quantidade aproximada de sentenças identificadas por pontuação final.
+4. `media_palavras_por_sentenca`: Média de palavras por sentença.
+5. `media_caracteres_por_palavra`: Média de caracteres por palavra.
+6. `maior_sentenca_palavras`: Comprimento da maior sentença em número de palavras.
+7. `variancia_tamanho_sentencas`: Variância do número de palavras por sentença.
+8. `palavras_unicas`: Quantidade de palavras únicas em caixa baixa.
+9. `type_token_ratio`: Razão entre palavras únicas e total de palavras.
+10. `diversidade_lexical`: Medida de diversidade lexical equivalente ao type-token ratio nesta versão.
+11. `razao_palavras_longas`: Proporção de palavras com tamanho maior ou igual ao limite configurado.
+12. `razao_palavras_repetidas`: Proporção de tokens que aparecem mais de uma vez no texto.
+13. `razao_pontuacao`: Proporção de caracteres de pontuação em relação ao total de caracteres.
+14. `razao_numeros`: Proporção de tokens numéricos em relação ao total de palavras/tokens.
+15. `frequencia_conectivos`: Proporção de conectivos simples em relação ao total de palavras.
+16. `frequencia_marcadores_subordinacao`: Proporção de marcadores de subordinação em relação ao total de palavras.
+17. `densidade_lexical_aproximada`: Proporção aproximada de palavras de conteúdo em relação ao total de palavras.
 
-Essas métricas foram escolhidas por oferecerem sinais interpretáveis relacionados a extensão, densidade, diversidade lexical, complexidade sintática aproximada e estrutura superficial do texto.
+Essas métricas aproximam aspectos de extensão, densidade lexical, estrutura sentencial, repetição, pontuação, conectivos e subordinação.
 
 ## Representações avaliadas
 
 | Representação | Descrição |
 | --- | --- |
-| `linguistic_metrics` | Usa apenas as métricas linguísticas interpretáveis |
-| `tfidf_word` | Usa TF-IDF baseado em palavras |
-| `tfidf_char` | Usa TF-IDF baseado em caracteres |
-| `tfidf_word_plus_linguistic_metrics` | Combina TF-IDF de palavras com métricas linguísticas |
+| `linguistic_metrics` | Usa apenas métricas linguísticas interpretáveis. |
+| `tfidf_word` | Usa TF-IDF baseado em palavras. |
+| `tfidf_char` | Usa TF-IDF baseado em caracteres. |
+| `tfidf_word_plus_linguistic_metrics` | Combina TF-IDF de palavras com métricas linguísticas. |
 
 ## Modelos avaliados
 
@@ -126,22 +113,11 @@ Essas métricas foram escolhidas por oferecerem sinais interpretáveis relaciona
 | Linear SVM | `linear_svm` |
 | Random Forest | `random_forest` |
 
-## Métricas de avaliação
+## Métrica de seleção
 
-Foram calculadas as seguintes métricas:
+A métrica de seleção foi `f1_macro`, adequada para problemas multiclasse porque calcula o desempenho médio entre classes. Como o dataset é balanceado, essa métrica também ajuda a verificar se o desempenho foi consistente entre as três classes.
 
-- accuracy;
-- precision macro;
-- recall macro;
-- F1 macro;
-- F1 weighted;
-- balanced accuracy.
-
-A métrica de seleção configurada foi `f1_macro`, adequada para comparar desempenho médio entre classes sem favorecer diretamente a classe mais frequente.
-
-## Critério de seleção do melhor experimento
-
-O melhor experimento foi selecionado no conjunto de validação. O experimento escolhido foi:
+## Experimento selecionado
 
 | Campo | Valor |
 | --- | --- |
@@ -149,24 +125,17 @@ O melhor experimento foi selecionado no conjunto de validação. O experimento e
 | Representação | `tfidf_word` |
 | Modelo | `logistic_regression` |
 | Métrica de seleção | `f1_macro` |
-| Pontuação em validação | 1.000000 |
+| Pontuação em validação | `1.000000` |
 
 ## Avaliação final
 
-Após a seleção, o melhor modelo foi aplicado apenas ao conjunto de teste. O conjunto de teste possui 1350 registros, com 450 exemplos da classe `alta`, 450 da classe `baixa` e 450 da classe `media`.
+Após a seleção, o melhor modelo foi aplicado ao conjunto de teste, composto por 1350 registros balanceados.
 
-Os resultados finais foram salvos em:
-
-- `outputs/metrics/final_metrics.json`;
-- `outputs/metrics/classification_report.json`;
-- `outputs/metrics/classification_report.txt`;
-- `outputs/metrics/test_predictions.csv`;
-- `outputs/figures/confusion_matrix.png`;
-- `outputs/reports/final_report.md`.
+Os artefatos finais foram salvos em `docs/resultados/` como cópia controlada dos arquivos gerados automaticamente pelo pipeline.
 
 ## Reprodutibilidade
 
-Para reproduzir o experimento, executar:
+Para reproduzir a execução:
 
 ```bash
 python -m venv venv
@@ -184,4 +153,4 @@ source venv/bin/activate
 
 ## Observação metodológica
 
-Como o dataset utilizado nesta execução é sintético, curado ou controlado, os resultados devem ser interpretados como validação do pipeline e da estratégia experimental. Para inferências mais amplas sobre textos literários reais, recomenda-se validação adicional com corpus externo, curadoria humana dos rótulos e avaliação cruzada em bases independentes.
+Como a base usada nesta etapa é sintética, curada ou controlada, os resultados devem ser interpretados como validação operacional do pipeline. A generalização para textos literários reais exige validação posterior com corpus externo e critérios de rotulagem independentes.
