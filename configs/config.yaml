@@ -1,0 +1,60 @@
+project:
+  name: "complexidade-cognitiva-ptbr"
+  version: "0.1.0"
+  description: "Pipeline local para estimação automática de complexidade cognitiva em textos literários em português."
+  language: "pt-BR"
+  random_state: 42
+
+dataset:
+  input_path: "data/raw/dataset.csv"
+  id_column: "id"
+  text_column: "texto"
+  target_column: "target"
+  split:
+    train_size: 0.70
+    val_size: 0.15
+    test_size: 0.15
+    stratify: true
+
+preprocessing:
+  preserve_original_text: true
+  clean_text_column: "texto_limpo"
+  normalize_whitespace: true
+
+features:
+  output_dir: "data/processed/features"
+  long_word_min_chars: 7
+  tfidf:
+    word:
+      enabled: true
+      max_features: 5000
+      ngram_range: [1, 2]
+      min_df: 1
+    char:
+      enabled: true
+      max_features: 3000
+      ngram_range: [3, 5]
+      min_df: 1
+
+training:
+  models:
+    - "logistic_regression"
+    - "linear_svm"
+    - "random_forest"
+  representations:
+    - "linguistic_metrics"
+    - "tfidf_word"
+    - "tfidf_char"
+    - "tfidf_word_plus_linguistic_metrics"
+  selection_metric: "f1_macro"
+
+outputs:
+  processed_dir: "data/processed"
+  model_dir: "outputs/models"
+  metrics_dir: "outputs/metrics"
+  figures_dir: "outputs/figures"
+  reports_dir: "outputs/reports"
+
+logging:
+  level: "INFO"
+  format: "text"
