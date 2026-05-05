@@ -6,25 +6,25 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeVar
 
-from complexidade_cognitiva_ptbr.config.settings import AppSettings, load_settings
-from complexidade_cognitiva_ptbr.data.preprocessing import (
+from .config.settings import AppSettings, load_settings
+from .data.preprocessing import (
     PreparationResult,
     prepare_dataset,
 )
-from complexidade_cognitiva_ptbr.evaluation.reporting import (
+from .evaluation.reporting import (
     EvaluationResult,
     evaluate_model,
 )
-from complexidade_cognitiva_ptbr.features.build_features import (
+from .features.build_features import (
     FeatureBuildResult,
     build_feature_datasets,
 )
-from complexidade_cognitiva_ptbr.models.train import TrainingResult, train_model
-from complexidade_cognitiva_ptbr.utils.logging_utils import (
+from .models.train import TrainingResult, train_model
+from .utils.logging_utils import (
     configure_logging,
     get_logger,
 )
-from complexidade_cognitiva_ptbr.utils.paths import (
+from .utils.paths import (
     ensure_project_directories,
     relative_to_root,
 )

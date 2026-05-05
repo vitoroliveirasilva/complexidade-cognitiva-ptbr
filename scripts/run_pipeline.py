@@ -79,7 +79,7 @@ def run_pipeline(
 def _load_pipeline_class() -> type[Any]:
 
     _ensure_local_src_on_path()
-    from complexidade_cognitiva_ptbr.pipeline import CognitiveComplexityPipeline
+    from ..src.complexidade_cognitiva_ptbr.pipeline import CognitiveComplexityPipeline
 
     return CognitiveComplexityPipeline
 
