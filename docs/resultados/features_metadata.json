@@ -1,0 +1,162 @@
+{
+  "generated_at_utc": "2026-05-05T02:44:59.224573+00:00",
+  "project": {
+    "name": "complexidade-cognitiva-ptbr",
+    "version": "0.1.0",
+    "random_state": 42
+  },
+  "source": {
+    "text_column_used": "texto_limpo",
+    "text_column_by_split": {
+      "train": "texto_limpo",
+      "val": "texto_limpo",
+      "test": "texto_limpo"
+    },
+    "id_column": "id",
+    "target_column": "target",
+    "input_paths": {
+      "train": "data/processed/train.csv",
+      "val": "data/processed/val.csv",
+      "test": "data/processed/test.csv"
+    }
+  },
+  "outputs": {
+    "train": "data/processed/features/train_features.csv",
+    "val": "data/processed/features/val_features.csv",
+    "test": "data/processed/features/test_features.csv",
+    "metadata_path": "data/processed/features/features_metadata.json"
+  },
+  "parameters": {
+    "long_word_min_chars": 7,
+    "sentence_tokenization": "regex_local",
+    "word_tokenization": "regex_local_unicode",
+    "external_downloads_required": false
+  },
+  "feature_columns": [
+    "num_caracteres",
+    "num_palavras",
+    "num_sentencas",
+    "media_palavras_por_sentenca",
+    "media_caracteres_por_palavra",
+    "maior_sentenca_palavras",
+    "variancia_tamanho_sentencas",
+    "palavras_unicas",
+    "type_token_ratio",
+    "diversidade_lexical",
+    "razao_palavras_longas",
+    "razao_palavras_repetidas",
+    "razao_pontuacao",
+    "razao_numeros",
+    "frequencia_conectivos",
+    "frequencia_marcadores_subordinacao",
+    "densidade_lexical_aproximada"
+  ],
+  "feature_descriptions": {
+    "num_caracteres": "Quantidade total de caracteres do texto limpo.",
+    "num_palavras": "Quantidade total de tokens lexicais identificados no texto.",
+    "num_sentencas": "Quantidade aproximada de sentenças identificadas por pontuação final.",
+    "media_palavras_por_sentenca": "Média de palavras por sentença.",
+    "media_caracteres_por_palavra": "Média de caracteres por palavra.",
+    "maior_sentenca_palavras": "Comprimento da maior sentença em número de palavras.",
+    "variancia_tamanho_sentencas": "Variância do número de palavras por sentença.",
+    "palavras_unicas": "Quantidade de palavras únicas em caixa baixa.",
+    "type_token_ratio": "Razão entre palavras únicas e total de palavras.",
+    "diversidade_lexical": "Medida de diversidade lexical equivalente ao type-token ratio nesta versão.",
+    "razao_palavras_longas": "Proporção de palavras com tamanho maior ou igual ao limite configurado.",
+    "razao_palavras_repetidas": "Proporção de tokens que aparecem mais de uma vez no texto.",
+    "razao_pontuacao": "Proporção de caracteres de pontuação em relação ao total de caracteres.",
+    "razao_numeros": "Proporção de tokens numéricos em relação ao total de palavras/tokens.",
+    "frequencia_conectivos": "Proporção de conectivos simples em relação ao total de palavras.",
+    "frequencia_marcadores_subordinacao": "Proporção de marcadores de subordinação em relação ao total de palavras.",
+    "densidade_lexical_aproximada": "Proporção aproximada de palavras de conteúdo em relação ao total de palavras."
+  },
+  "splits": {
+    "train": {
+      "source_rows": 6300,
+      "feature_rows": 6300,
+      "feature_count": 17,
+      "class_distribution": {
+        "alta": 2100,
+        "baixa": 2100,
+        "media": 2100
+      },
+      "missing_values_by_feature": {
+        "num_caracteres": 0,
+        "num_palavras": 0,
+        "num_sentencas": 0,
+        "media_palavras_por_sentenca": 0,
+        "media_caracteres_por_palavra": 0,
+        "maior_sentenca_palavras": 0,
+        "variancia_tamanho_sentencas": 0,
+        "palavras_unicas": 0,
+        "type_token_ratio": 0,
+        "diversidade_lexical": 0,
+        "razao_palavras_longas": 0,
+        "razao_palavras_repetidas": 0,
+        "razao_pontuacao": 0,
+        "razao_numeros": 0,
+        "frequencia_conectivos": 0,
+        "frequencia_marcadores_subordinacao": 0,
+        "densidade_lexical_aproximada": 0
+      }
+    },
+    "val": {
+      "source_rows": 1350,
+      "feature_rows": 1350,
+      "feature_count": 17,
+      "class_distribution": {
+        "alta": 450,
+        "baixa": 450,
+        "media": 450
+      },
+      "missing_values_by_feature": {
+        "num_caracteres": 0,
+        "num_palavras": 0,
+        "num_sentencas": 0,
+        "media_palavras_por_sentenca": 0,
+        "media_caracteres_por_palavra": 0,
+        "maior_sentenca_palavras": 0,
+        "variancia_tamanho_sentencas": 0,
+        "palavras_unicas": 0,
+        "type_token_ratio": 0,
+        "diversidade_lexical": 0,
+        "razao_palavras_longas": 0,
+        "razao_palavras_repetidas": 0,
+        "razao_pontuacao": 0,
+        "razao_numeros": 0,
+        "frequencia_conectivos": 0,
+        "frequencia_marcadores_subordinacao": 0,
+        "densidade_lexical_aproximada": 0
+      }
+    },
+    "test": {
+      "source_rows": 1350,
+      "feature_rows": 1350,
+      "feature_count": 17,
+      "class_distribution": {
+        "alta": 450,
+        "baixa": 450,
+        "media": 450
+      },
+      "missing_values_by_feature": {
+        "num_caracteres": 0,
+        "num_palavras": 0,
+        "num_sentencas": 0,
+        "media_palavras_por_sentenca": 0,
+        "media_caracteres_por_palavra": 0,
+        "maior_sentenca_palavras": 0,
+        "variancia_tamanho_sentencas": 0,
+        "palavras_unicas": 0,
+        "type_token_ratio": 0,
+        "diversidade_lexical": 0,
+        "razao_palavras_longas": 0,
+        "razao_palavras_repetidas": 0,
+        "razao_pontuacao": 0,
+        "razao_numeros": 0,
+        "frequencia_conectivos": 0,
+        "frequencia_marcadores_subordinacao": 0,
+        "densidade_lexical_aproximada": 0
+      }
+    }
+  }
+}

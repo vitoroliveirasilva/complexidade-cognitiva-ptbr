@@ -1,0 +1,112 @@
+{
+  "generated_at_utc": "2026-05-05T02:44:56.881976+00:00",
+  "project": {
+    "name": "complexidade-cognitiva-ptbr",
+    "version": "0.1.0",
+    "random_state": 42
+  },
+  "input": {
+    "path": "data/raw/dataset.csv",
+    "rows": 9000,
+    "columns": [
+      "id",
+      "texto",
+      "target"
+    ]
+  },
+  "validation": {
+    "rows": 9000,
+    "columns": [
+      "id",
+      "texto",
+      "target"
+    ],
+    "required_columns": [
+      "id",
+      "texto",
+      "target"
+    ],
+    "required_nulls": {
+      "id": 0,
+      "texto": 0,
+      "target": 0
+    },
+    "blank_required_values": {
+      "id": 0,
+      "texto": 0,
+      "target": 0
+    },
+    "class_distribution": {
+      "alta": 3000,
+      "baixa": 3000,
+      "media": 3000
+    },
+    "exact_duplicate_text_count": 0,
+    "normalized_duplicate_text_count": 0,
+    "exact_duplicate_text_examples": [],
+    "warnings": []
+  },
+  "cleaning": {
+    "text_column": "texto",
+    "clean_text_column": "texto_limpo",
+    "preserve_original_text": true,
+    "normalize_whitespace": true,
+    "changed_rows": 0,
+    "empty_after_cleaning": 0
+  },
+  "split": {
+    "requested": {
+      "train_size": 0.7,
+      "val_size": 0.15,
+      "test_size": 0.15,
+      "stratify": true
+    },
+    "estimated_counts": {
+      "train": 6300,
+      "val": 1350,
+      "test": 1350
+    },
+    "actual_counts": {
+      "train": 6300,
+      "val": 1350,
+      "test": 1350
+    },
+    "actual_percentages": {
+      "train": 0.7,
+      "val": 0.15,
+      "test": 0.15
+    },
+    "stratified_used": true,
+    "stratification_warning": "",
+    "warnings": [],
+    "class_distribution": {
+      "full": {
+        "alta": 3000,
+        "baixa": 3000,
+        "media": 3000
+      },
+      "train": {
+        "alta": 2100,
+        "baixa": 2100,
+        "media": 2100
+      },
+      "val": {
+        "alta": 450,
+        "baixa": 450,
+        "media": 450
+      },
+      "test": {
+        "alta": 450,
+        "baixa": 450,
+        "media": 450
+      }
+    }
+  },
+  "outputs": {
+    "train_path": "data/processed/train.csv",
+    "val_path": "data/processed/val.csv",
+    "test_path": "data/processed/test.csv",
+    "report_path": "data/processed/preparation_report.json"
+  },
+  "warnings": []
+}

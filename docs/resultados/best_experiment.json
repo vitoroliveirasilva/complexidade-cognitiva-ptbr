@@ -1,0 +1,312 @@
+{
+  "generated_at_utc": "2026-05-05T02:45:19.687732+00:00",
+  "project": {
+    "name": "complexidade-cognitiva-ptbr",
+    "version": "0.1.0",
+    "random_state": 42
+  },
+  "selection": {
+    "selection_metric": "f1_macro",
+    "best_experiment_id": "tfidf_word__logistic_regression",
+    "best_validation_score": 1.0
+  },
+  "best_experiment": {
+    "experiment_id": "tfidf_word__logistic_regression",
+    "representation": "tfidf_word",
+    "model_name": "logistic_regression",
+    "selection_metric": "f1_macro",
+    "validation_metrics": {
+      "accuracy": 1.0,
+      "precision_macro": 1.0,
+      "recall_macro": 1.0,
+      "f1_macro": 1.0,
+      "f1_weighted": 1.0,
+      "balanced_accuracy": 1.0
+    },
+    "validation_prediction_distribution": {
+      "alta": 450,
+      "baixa": 450,
+      "media": 450
+    }
+  },
+  "training_context": {
+    "train_rows": 6300,
+    "val_rows": 1350,
+    "train_class_distribution": {
+      "alta": 2100,
+      "baixa": 2100,
+      "media": 2100
+    },
+    "val_class_distribution": {
+      "alta": 450,
+      "baixa": 450,
+      "media": 450
+    },
+    "text_column_used": "texto_limpo",
+    "feature_columns": [
+      "num_caracteres",
+      "num_palavras",
+      "num_sentencas",
+      "media_palavras_por_sentenca",
+      "media_caracteres_por_palavra",
+      "maior_sentenca_palavras",
+      "variancia_tamanho_sentencas",
+      "palavras_unicas",
+      "type_token_ratio",
+      "diversidade_lexical",
+      "razao_palavras_longas",
+      "razao_palavras_repetidas",
+      "razao_pontuacao",
+      "razao_numeros",
+      "frequencia_conectivos",
+      "frequencia_marcadores_subordinacao",
+      "densidade_lexical_aproximada"
+    ],
+    "models_configured": [
+      "logistic_regression",
+      "linear_svm",
+      "random_forest"
+    ],
+    "representations_configured": [
+      "linguistic_metrics",
+      "tfidf_word",
+      "tfidf_char",
+      "tfidf_word_plus_linguistic_metrics"
+    ]
+  },
+  "outputs": {
+    "best_model_path": "outputs/models/best_model.joblib",
+    "best_experiment_path": "outputs/models/best_experiment.json",
+    "experiment_results_path": "outputs/models/experiment_results.csv"
+  },
+  "experiments": [
+    {
+      "experiment_id": "linguistic_metrics__logistic_regression",
+      "representation": "linguistic_metrics",
+      "model_name": "logistic_regression",
+      "selection_metric": "f1_macro",
+      "validation_metrics": {
+        "accuracy": 0.994815,
+        "precision_macro": 0.994816,
+        "recall_macro": 0.994815,
+        "f1_macro": 0.994815,
+        "f1_weighted": 0.994815,
+        "balanced_accuracy": 0.994815
+      },
+      "validation_prediction_distribution": {
+        "alta": 449,
+        "baixa": 450,
+        "media": 451
+      }
+    },
+    {
+      "experiment_id": "linguistic_metrics__linear_svm",
+      "representation": "linguistic_metrics",
+      "model_name": "linear_svm",
+      "selection_metric": "f1_macro",
+      "validation_metrics": {
+        "accuracy": 0.996296,
+        "precision_macro": 0.996298,
+        "recall_macro": 0.996296,
+        "f1_macro": 0.996296,
+        "f1_weighted": 0.996296,
+        "balanced_accuracy": 0.996296
+      },
+      "validation_prediction_distribution": {
+        "alta": 451,
+        "baixa": 450,
+        "media": 449
+      }
+    },
+    {
+      "experiment_id": "linguistic_metrics__random_forest",
+      "representation": "linguistic_metrics",
+      "model_name": "random_forest",
+      "selection_metric": "f1_macro",
+      "validation_metrics": {
+        "accuracy": 0.992593,
+        "precision_macro": 0.992696,
+        "recall_macro": 0.992593,
+        "f1_macro": 0.992592,
+        "f1_weighted": 0.992592,
+        "balanced_accuracy": 0.992593
+      },
+      "validation_prediction_distribution": {
+        "alta": 458,
+        "baixa": 450,
+        "media": 442
+      }
+    },
+    {
+      "experiment_id": "tfidf_word__logistic_regression",
+      "representation": "tfidf_word",
+      "model_name": "logistic_regression",
+      "selection_metric": "f1_macro",
+      "validation_metrics": {
+        "accuracy": 1.0,
+        "precision_macro": 1.0,
+        "recall_macro": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0,
+        "balanced_accuracy": 1.0
+      },
+      "validation_prediction_distribution": {
+        "alta": 450,
+        "baixa": 450,
+        "media": 450
+      }
+    },
+    {
+      "experiment_id": "tfidf_word__linear_svm",
+      "representation": "tfidf_word",
+      "model_name": "linear_svm",
+      "selection_metric": "f1_macro",
+      "validation_metrics": {
+        "accuracy": 1.0,
+        "precision_macro": 1.0,
+        "recall_macro": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0,
+        "balanced_accuracy": 1.0
+      },
+      "validation_prediction_distribution": {
+        "alta": 450,
+        "baixa": 450,
+        "media": 450
+      }
+    },
+    {
+      "experiment_id": "tfidf_word__random_forest",
+      "representation": "tfidf_word",
+      "model_name": "random_forest",
+      "selection_metric": "f1_macro",
+      "validation_metrics": {
+        "accuracy": 1.0,
+        "precision_macro": 1.0,
+        "recall_macro": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0,
+        "balanced_accuracy": 1.0
+      },
+      "validation_prediction_distribution": {
+        "alta": 450,
+        "baixa": 450,
+        "media": 450
+      }
+    },
+    {
+      "experiment_id": "tfidf_char__logistic_regression",
+      "representation": "tfidf_char",
+      "model_name": "logistic_regression",
+      "selection_metric": "f1_macro",
+      "validation_metrics": {
+        "accuracy": 1.0,
+        "precision_macro": 1.0,
+        "recall_macro": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0,
+        "balanced_accuracy": 1.0
+      },
+      "validation_prediction_distribution": {
+        "alta": 450,
+        "baixa": 450,
+        "media": 450
+      }
+    },
+    {
+      "experiment_id": "tfidf_char__linear_svm",
+      "representation": "tfidf_char",
+      "model_name": "linear_svm",
+      "selection_metric": "f1_macro",
+      "validation_metrics": {
+        "accuracy": 1.0,
+        "precision_macro": 1.0,
+        "recall_macro": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0,
+        "balanced_accuracy": 1.0
+      },
+      "validation_prediction_distribution": {
+        "alta": 450,
+        "baixa": 450,
+        "media": 450
+      }
+    },
+    {
+      "experiment_id": "tfidf_char__random_forest",
+      "representation": "tfidf_char",
+      "model_name": "random_forest",
+      "selection_metric": "f1_macro",
+      "validation_metrics": {
+        "accuracy": 1.0,
+        "precision_macro": 1.0,
+        "recall_macro": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0,
+        "balanced_accuracy": 1.0
+      },
+      "validation_prediction_distribution": {
+        "alta": 450,
+        "baixa": 450,
+        "media": 450
+      }
+    },
+    {
+      "experiment_id": "tfidf_word_plus_linguistic_metrics__logistic_regression",
+      "representation": "tfidf_word_plus_linguistic_metrics",
+      "model_name": "logistic_regression",
+      "selection_metric": "f1_macro",
+      "validation_metrics": {
+        "accuracy": 1.0,
+        "precision_macro": 1.0,
+        "recall_macro": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0,
+        "balanced_accuracy": 1.0
+      },
+      "validation_prediction_distribution": {
+        "alta": 450,
+        "baixa": 450,
+        "media": 450
+      }
+    },
+    {
+      "experiment_id": "tfidf_word_plus_linguistic_metrics__linear_svm",
+      "representation": "tfidf_word_plus_linguistic_metrics",
+      "model_name": "linear_svm",
+      "selection_metric": "f1_macro",
+      "validation_metrics": {
+        "accuracy": 1.0,
+        "precision_macro": 1.0,
+        "recall_macro": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0,
+        "balanced_accuracy": 1.0
+      },
+      "validation_prediction_distribution": {
+        "alta": 450,
+        "baixa": 450,
+        "media": 450
+      }
+    },
+    {
+      "experiment_id": "tfidf_word_plus_linguistic_metrics__random_forest",
+      "representation": "tfidf_word_plus_linguistic_metrics",
+      "model_name": "random_forest",
+      "selection_metric": "f1_macro",
+      "validation_metrics": {
+        "accuracy": 1.0,
+        "precision_macro": 1.0,
+        "recall_macro": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0,
+        "balanced_accuracy": 1.0
+      },
+      "validation_prediction_distribution": {
+        "alta": 450,
+        "baixa": 450,
+        "media": 450
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+experiment_id,representation,model_name,selection_metric,validation_accuracy,validation_precision_macro,validation_recall_macro,validation_f1_macro,validation_f1_weighted,validation_balanced_accuracy
+tfidf_word__logistic_regression,tfidf_word,logistic_regression,f1_macro,1.0,1.0,1.0,1.0,1.0,1.0
+tfidf_word__linear_svm,tfidf_word,linear_svm,f1_macro,1.0,1.0,1.0,1.0,1.0,1.0
+tfidf_word__random_forest,tfidf_word,random_forest,f1_macro,1.0,1.0,1.0,1.0,1.0,1.0
+tfidf_char__logistic_regression,tfidf_char,logistic_regression,f1_macro,1.0,1.0,1.0,1.0,1.0,1.0
+tfidf_char__linear_svm,tfidf_char,linear_svm,f1_macro,1.0,1.0,1.0,1.0,1.0,1.0
+tfidf_char__random_forest,tfidf_char,random_forest,f1_macro,1.0,1.0,1.0,1.0,1.0,1.0
+tfidf_word_plus_linguistic_metrics__logistic_regression,tfidf_word_plus_linguistic_metrics,logistic_regression,f1_macro,1.0,1.0,1.0,1.0,1.0,1.0
+tfidf_word_plus_linguistic_metrics__linear_svm,tfidf_word_plus_linguistic_metrics,linear_svm,f1_macro,1.0,1.0,1.0,1.0,1.0,1.0
+tfidf_word_plus_linguistic_metrics__random_forest,tfidf_word_plus_linguistic_metrics,random_forest,f1_macro,1.0,1.0,1.0,1.0,1.0,1.0
+linguistic_metrics__linear_svm,linguistic_metrics,linear_svm,f1_macro,0.996296,0.996298,0.996296,0.996296,0.996296,0.996296
+linguistic_metrics__logistic_regression,linguistic_metrics,logistic_regression,f1_macro,0.994815,0.994816,0.994815,0.994815,0.994815,0.994815
+linguistic_metrics__random_forest,linguistic_metrics,random_forest,f1_macro,0.992593,0.992696,0.992593,0.992592,0.992592,0.992593
