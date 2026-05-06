@@ -48,12 +48,97 @@ training:
     - "tfidf_word_plus_linguistic_metrics"
   selection_metric: "f1_macro"
 
+cross_validation:
+  enabled: true
+  method: "stratified_kfold"
+  n_splits: 5
+  n_repeats: 1
+  shuffle: true
+  random_state: 42
+  scoring:
+    - "accuracy"
+    - "precision_macro"
+    - "recall_macro"
+    - "f1_macro"
+    - "f1_weighted"
+    - "balanced_accuracy"
+
+leakage_checks:
+  enabled: true
+  check_id_overlap: true
+  check_exact_text_overlap: true
+  check_normalized_text_overlap: true
+  check_near_duplicates: true
+  near_duplicate_threshold: 0.92
+  check_target_like_columns: true
+  fail_on_critical_leakage: true
+
+hyperparameter_search:
+  enabled: true
+  strategy: "grid"
+  refit_metric: "f1_macro"
+  n_jobs: -1
+  verbose: 1
+  save_all_results: true
+  search_spaces:
+    logistic_regression:
+      C: [0.1, 1.0, 3.0, 10.0]
+      max_iter: [1000, 2000]
+      class_weight: [null, "balanced"]
+    linear_svm:
+      C: [0.1, 1.0, 3.0, 10.0]
+      class_weight: [null, "balanced"]
+    random_forest:
+      n_estimators: [100, 300]
+      max_depth: [null, 10, 30]
+      min_samples_split: [2, 5]
+      class_weight: [null, "balanced"]
+
+explainability:
+  enabled: true
+  top_n_terms_per_class: 30
+  generate_global_tfidf_coefficients: true
+  generate_local_explanations: true
+  sample_predictions_per_class: 10
+  output_format:
+    - "json"
+    - "csv"
+    - "md"
+
+run_tracking:
+  enabled: true
+  run_id_format: "%Y%m%d_%H%M%S"
+  create_latest_pointer: true
+  copy_config_snapshot: true
+  save_environment: true
+  save_dataset_fingerprint: true
+  save_git_commit: true
+
+inference:
+  enabled: true
+  default_model_path: "outputs/latest/models/best_model_bundle.joblib"
+  include_probabilities: true
+  include_linguistic_metrics: true
+  include_explanations: true
+
+visual_reports:
+  enabled: true
+  dpi: 160
+  generate_normalized_confusion_matrix: true
+  generate_experiment_comparison_chart: true
+  generate_cv_summary_chart: true
+  generate_feature_distribution_charts: true
+  generate_top_terms_chart: true
+  generate_prediction_confidence_chart: true
+
 outputs:
   processed_dir: "data/processed"
   model_dir: "outputs/models"
   metrics_dir: "outputs/metrics"
   figures_dir: "outputs/figures"
   reports_dir: "outputs/reports"
+  runs_dir: "outputs/runs"
+  latest_dir: "outputs/latest"
 
 logging:
   level: "INFO"
