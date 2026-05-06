@@ -73,6 +73,12 @@ outputs/figures/*
 !outputs/figures/.gitkeep
 outputs/reports/*
 !outputs/reports/.gitkeep
+outputs/runs/*
+!outputs/runs/.gitkeep
+outputs/latest/*
+!outputs/latest/.gitkeep
+outputs/ci_smoke/*
+
 
 # Modelos e binários pesados gerados localmente
 *.joblib
