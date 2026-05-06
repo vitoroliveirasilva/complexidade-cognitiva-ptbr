@@ -46,16 +46,21 @@ Thumbs.db
 .ipynb_checkpoints/
 
 # Dados brutos
-# Para o TCC, o dataset sintético/curado oficial pode ser versionado.
-# Qualquer outro dado bruto local, privado ou pesado deve ficar fora do Git.
+# O dataset final é gerado localmente a partir das fontes públicas em external/public_domain_sources.csv
 data/raw/*
 !data/raw/.gitkeep
-!data/raw/dataset.csv
-!data/raw/dataset_summary.json
 
-# Dados externos/intermediários/gerados
+# Dados externos
+# Apenas o catálogo de fontes públicas usado para reproduzir o dataset é versionado
 data/external/*
 !data/external/.gitkeep
+!data/external/public_domain_sources.csv
+
+# Textos baixados das fontes públicas
+# São reproduzíveis via script e não versionados
+data/external/public_domain_texts/
+
+# Dados intermediários/processados gerados localmente
 data/interim/*
 !data/interim/.gitkeep
 data/processed/*
@@ -89,7 +94,7 @@ outputs/ci_smoke/*
 *.pth
 *.onnx
 
-# Arquivos tabulares grandes gerados fora do dataset oficial
+# Arquivos tabulares grandes gerados localmente
 *.parquet
 *.feather
 *.arrow
