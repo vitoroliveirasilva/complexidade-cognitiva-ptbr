@@ -1,9 +1,0 @@
-              precision    recall  f1-score   support
-
-        alta       1.00      1.00      1.00       450
-       baixa       1.00      1.00      1.00       450
-       media       1.00      1.00      1.00       450
-
-    accuracy                           1.00      1350
-   macro avg       1.00      1.00      1.00      1350
-weighted avg       1.00      1.00      1.00      1350
