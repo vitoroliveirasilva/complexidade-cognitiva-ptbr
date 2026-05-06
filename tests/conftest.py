@@ -30,15 +30,22 @@ os.environ.setdefault("MPLCONFIGDIR", str(_MPLCONFIGDIR))
 
 from complexidade_cognitiva_ptbr.config.settings import (
     AppSettings,
+    CrossValidationConfig,
     DatasetConfig,
+    ExplainabilityConfig,
     FeaturesConfig,
+    HyperparameterSearchConfig,
+    InferenceConfig,
+    LeakageChecksConfig,
     LoggingConfig,
     OutputsConfig,
     PreprocessingConfig,
     ProjectConfig,
+    RunTrackingConfig,
     SplitConfig,
     TfidfVectorizerConfig,
     TrainingConfig,
+    VisualReportsConfig,
 )
 from complexidade_cognitiva_ptbr.data.preprocessing import prepare_dataset
 from complexidade_cognitiva_ptbr.features.build_features import (
@@ -188,12 +195,86 @@ def app_settings(tmp_path: Path) -> AppSettings:
             representations=("linguistic_metrics",),
             selection_metric="f1_macro",
         ),
+        cross_validation=CrossValidationConfig(
+            enabled=True,
+            method="stratified_kfold",
+            n_splits=3,
+            n_repeats=1,
+            shuffle=True,
+            random_state=42,
+            scoring=("accuracy", "f1_macro"),
+        ),
+        leakage_checks=LeakageChecksConfig(
+            enabled=True,
+            check_id_overlap=True,
+            check_exact_text_overlap=True,
+            check_normalized_text_overlap=True,
+            check_near_duplicates=True,
+            near_duplicate_threshold=0.92,
+            check_target_like_columns=True,
+            fail_on_critical_leakage=True,
+        ),
+        hyperparameter_search=HyperparameterSearchConfig(
+            enabled=True,
+            strategy="grid",
+            refit_metric="f1_macro",
+            n_jobs=1,
+            verbose=0,
+            save_all_results=True,
+            search_spaces={
+                "logistic_regression": {
+                    "C": (1.0,),
+                    "max_iter": (1000,),
+                    "class_weight": (None,),
+                }
+            },
+        ),
+        explainability=ExplainabilityConfig(
+            enabled=True,
+            top_n_terms_per_class=10,
+            generate_global_tfidf_coefficients=True,
+            generate_local_explanations=True,
+            sample_predictions_per_class=2,
+            output_format=("json", "csv", "md"),
+        ),
+        run_tracking=RunTrackingConfig(
+            enabled=True,
+            run_id_format="%Y%m%d_%H%M%S",
+            create_latest_pointer=True,
+            copy_config_snapshot=True,
+            save_environment=True,
+            save_dataset_fingerprint=True,
+            save_git_commit=True,
+        ),
+        inference=InferenceConfig(
+            enabled=True,
+            default_model_path=project_root
+            / "outputs"
+            / "latest"
+            / "models"
+            / "best_model_bundle.joblib",
+            include_probabilities=True,
+            include_linguistic_metrics=True,
+            include_explanations=True,
+        ),
+        visual_reports=VisualReportsConfig(
+            enabled=True,
+            dpi=160,
+            generate_normalized_confusion_matrix=True,
+            generate_experiment_comparison_chart=True,
+            generate_cv_summary_chart=True,
+            generate_feature_distribution_charts=True,
+            generate_top_terms_chart=True,
+            generate_prediction_confidence_chart=True,
+        ),
         outputs=OutputsConfig(
             processed_dir=project_root / "data" / "processed",
             model_dir=project_root / "outputs" / "models",
             metrics_dir=project_root / "outputs" / "metrics",
             figures_dir=project_root / "outputs" / "figures",
             reports_dir=project_root / "outputs" / "reports",
+            runs_dir=project_root / "outputs" / "runs",
+            latest_dir=project_root / "outputs" / "latest",
         ),
         logging=LoggingConfig(level="INFO", format="text"),
     )

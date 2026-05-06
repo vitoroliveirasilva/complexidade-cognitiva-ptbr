@@ -20,7 +20,7 @@ from complexidade_cognitiva_ptbr.utils.paths import (
 def test_managed_directories_are_created(app_settings) -> None:
     directories = ensure_project_directories(app_settings)
 
-    assert len(directories) == 7
+    assert len(directories) == 9
     assert all(directory.exists() and directory.is_dir() for directory in directories)
 
 
@@ -115,6 +115,9 @@ def test_load_settings_parses_valid_yaml(tmp_path: Path) -> None:
     assert settings.project_root == root
     assert settings.dataset.input_path == root / "data" / "raw" / "dataset.csv"
     assert settings.training.models == ("logistic_regression",)
+    assert settings.cross_validation.enabled is True
+    assert settings.outputs.runs_dir == root / "outputs" / "runs"
+    assert settings.outputs.latest_dir == root / "outputs" / "latest"
 
 
 def test_load_settings_rejects_duplicate_required_dataset_columns(
