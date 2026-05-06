@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import shutil
 import warnings
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -31,6 +32,15 @@ from ..config.settings import AppSettings, TfidfVectorizerConfig
 from ..data.io import read_csv_dataset, write_json
 from ..features.build_features import get_feature_columns
 from ..utils.paths import relative_to_root
+from .bundle import create_model_bundle, save_model_bundle
+from .search import (
+    HyperparameterSearchArtifacts,
+    HyperparameterSearchError,
+    SearchOutcome,
+    build_disabled_search_artifacts,
+    persist_hyperparameter_search_artifacts,
+    run_hyperparameter_search_for_experiment,
+)
 
 SUPPORTED_MODELS = frozenset({"logistic_regression", "linear_svm", "random_forest"})
 SUPPORTED_REPRESENTATIONS = frozenset(
@@ -61,33 +71,41 @@ class TrainingError(RuntimeError):
 @dataclass(frozen=True)
 class TrainingResult:
     best_model_path: Path
+    best_bundle_path: Path
     best_experiment_path: Path
     experiment_results_path: Path
+    hyperparameter_results_path: Path
+    best_hyperparameters_path: Path
+    hyperparameter_report_path: Path
     best_experiment: dict[str, Any]
     experiments: list[dict[str, Any]]
 
     def to_dict(self, project_root: Path | None = None) -> dict[str, Any]:
-
-        if project_root is None:
-            return {
-                "best_model_path": self.best_model_path.as_posix(),
-                "best_experiment_path": self.best_experiment_path.as_posix(),
-                "experiment_results_path": self.experiment_results_path.as_posix(),
-                "best_experiment": self.best_experiment,
-                "experiments": self.experiments,
-            }
+        def fmt(path: Path) -> str:
+            return path.as_posix() if project_root is None else relative_to_root(path, project_root)
 
         return {
-            "best_model_path": relative_to_root(self.best_model_path, project_root),
-            "best_experiment_path": relative_to_root(self.best_experiment_path, project_root),
-            "experiment_results_path": relative_to_root(self.experiment_results_path, project_root),
+            "best_model_path": fmt(self.best_model_path),
+            "best_bundle_path": fmt(self.best_bundle_path),
+            "best_experiment_path": fmt(self.best_experiment_path),
+            "experiment_results_path": fmt(self.experiment_results_path),
+            "hyperparameter_results_path": fmt(self.hyperparameter_results_path),
+            "best_hyperparameters_path": fmt(self.best_hyperparameters_path),
+            "hyperparameter_report_path": fmt(self.hyperparameter_report_path),
             "best_experiment": self.best_experiment,
             "experiments": self.experiments,
         }
 
 
 # Executa treinamento, comparação em validação e persistência do melhor modelo
-def train_model(settings: AppSettings) -> TrainingResult:
+def train_model(
+    settings: AppSettings,
+    *,
+    model_dir: Path | None = None,
+    metrics_dir: Path | None = None,
+    reports_dir: Path | None = None,
+    latest_dir: Path | None = None,
+) -> TrainingResult:
     
     validate_training_configuration(settings)
 
@@ -95,8 +113,18 @@ def train_model(settings: AppSettings) -> TrainingResult:
     feature_columns = validate_training_frames(train_df, val_df, settings)
     text_column = resolve_training_text_column(train_df, settings)
 
+    model_dir = model_dir or settings.outputs.model_dir
+    metrics_dir = metrics_dir or settings.outputs.metrics_dir
+    reports_dir = reports_dir or settings.outputs.reports_dir
+    latest_dir = latest_dir or settings.outputs.latest_dir
+    model_dir.mkdir(parents=True, exist_ok=True)
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    reports_dir.mkdir(parents=True, exist_ok=True)
+
     experiments: list[dict[str, Any]] = []
     trained_models: dict[str, Pipeline] = {}
+    search_rows: list[dict[str, Any]] = []
+    search_outcomes: dict[str, SearchOutcome] = {}
 
     for representation in settings.training.representations:
         for model_name in settings.training.models:
@@ -109,9 +137,23 @@ def train_model(settings: AppSettings) -> TrainingResult:
                 text_column=text_column,
             )
 
+            search_outcome = _maybe_run_search(
+                settings=settings,
+                pipeline=pipeline,
+                train_df=train_df,
+                model_name=model_name,
+                representation=representation,
+                target_column=settings.dataset.target_column,
+                text_column=text_column,
+                feature_columns=feature_columns,
+            )
+            tuned_pipeline = search_outcome.best_estimator
+            search_outcomes[experiment_id] = search_outcome
+            search_rows.extend(search_outcome.cv_results)
+
             try:
                 metrics, predictions = fit_and_score_experiment(
-                    pipeline=pipeline,
+                    pipeline=tuned_pipeline,
                     train_df=train_df,
                     val_df=val_df,
                     target_column=settings.dataset.target_column,
@@ -132,24 +174,32 @@ def train_model(settings: AppSettings) -> TrainingResult:
                 "selection_metric": settings.training.selection_metric,
                 "validation_metrics": metrics,
                 "validation_prediction_distribution": _prediction_distribution(predictions),
+                "hyperparameter_search": search_outcome.search_metadata,
             }
             experiments.append(experiment)
-            trained_models[experiment_id] = pipeline
+            trained_models[experiment_id] = tuned_pipeline
 
     if not experiments:
         raise TrainingError("Nenhum experimento foi treinado. Verifique training.models e training.representations.")
 
     best_experiment = select_best_experiment(experiments, settings.training.selection_metric)
     best_model = trained_models[best_experiment["experiment_id"]]
-
-    model_dir = settings.outputs.model_dir
-    model_dir.mkdir(parents=True, exist_ok=True)
+    best_search_outcome = search_outcomes.get(best_experiment["experiment_id"])
 
     best_model_path = model_dir / "best_model.joblib"
+    best_bundle_path = model_dir / "best_model_bundle.joblib"
     best_experiment_path = model_dir / "best_experiment.json"
     experiment_results_path = model_dir / "experiment_results.csv"
 
     persist_model(best_model, best_model_path)
+    search_artifacts = _persist_search_artifacts(
+        settings=settings,
+        search_rows=search_rows,
+        best_experiment=best_experiment,
+        best_search_outcome=best_search_outcome,
+        metrics_dir=metrics_dir,
+        reports_dir=reports_dir,
+    )
     best_experiment_payload = build_best_experiment_payload(
         settings=settings,
         best_experiment=best_experiment,
@@ -159,6 +209,8 @@ def train_model(settings: AppSettings) -> TrainingResult:
         val_df=val_df,
         best_model_path=best_model_path,
         experiment_results_path=experiment_results_path,
+        best_bundle_path=best_bundle_path,
+        search_artifacts=search_artifacts,
     )
     persist_best_experiment_payload(best_experiment_payload, best_experiment_path)
     persist_experiment_results(
@@ -166,14 +218,140 @@ def train_model(settings: AppSettings) -> TrainingResult:
         path=experiment_results_path,
         selection_metric=settings.training.selection_metric,
     )
+    bundle = create_model_bundle(
+        settings=settings,
+        model_pipeline=best_model,
+        best_experiment=best_experiment,
+        feature_columns=feature_columns,
+        config_snapshot=_build_config_snapshot(settings),
+        training_metrics=best_experiment["validation_metrics"],
+        text_column=text_column,
+    )
+    save_model_bundle(bundle, best_bundle_path)
+    _mirror_latest_model_artifacts(
+        latest_dir=latest_dir,
+        artifacts=(best_model_path, best_bundle_path, best_experiment_path, experiment_results_path),
+    )
 
     return TrainingResult(
         best_model_path=best_model_path,
+        best_bundle_path=best_bundle_path,
         best_experiment_path=best_experiment_path,
         experiment_results_path=experiment_results_path,
+        hyperparameter_results_path=search_artifacts.results_path,
+        best_hyperparameters_path=search_artifacts.best_params_path,
+        hyperparameter_report_path=search_artifacts.report_path,
         best_experiment=best_experiment_payload,
         experiments=experiments,
     )
+
+
+
+def _maybe_run_search(
+    *,
+    settings: AppSettings,
+    pipeline: Pipeline,
+    train_df: pd.DataFrame,
+    model_name: str,
+    representation: str,
+    target_column: str,
+    text_column: str,
+    feature_columns: list[str],
+) -> SearchOutcome:
+    try:
+        return run_hyperparameter_search_for_experiment(
+            settings=settings,
+            pipeline=pipeline,
+            train_df=train_df,
+            model_name=model_name,
+            representation=representation,
+            target_column=target_column,
+            text_column=text_column,
+            feature_columns=feature_columns,
+        )
+    except HyperparameterSearchError as exc:
+        raise TrainingError(str(exc)) from exc
+
+
+def _persist_search_artifacts(
+    *,
+    settings: AppSettings,
+    search_rows: list[dict[str, Any]],
+    best_experiment: dict[str, Any],
+    best_search_outcome: SearchOutcome | None,
+    metrics_dir: Path,
+    reports_dir: Path,
+) -> HyperparameterSearchArtifacts:
+    if not settings.hyperparameter_search.enabled:
+        return build_disabled_search_artifacts(
+            settings=settings,
+            metrics_dir=metrics_dir,
+            reports_dir=reports_dir,
+        )
+
+    best_payload = {
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "enabled": True,
+        "strategy": settings.hyperparameter_search.strategy,
+        "refit_metric": settings.hyperparameter_search.refit_metric,
+        "project": {"name": settings.project.name, "version": settings.project.version},
+        "best_experiment": {
+            "experiment_id": best_experiment["experiment_id"],
+            "representation": best_experiment["representation"],
+            "model_name": best_experiment["model_name"],
+            "best_params": best_search_outcome.best_params if best_search_outcome else {},
+            "best_search_score": best_search_outcome.best_score if best_search_outcome else None,
+            "validation_metrics": best_experiment["validation_metrics"],
+        },
+        "search_summary": {
+            "total_candidates": len(search_rows),
+            "experiments_with_search": len({row.get("experiment_id") for row in search_rows}),
+        },
+    }
+    return persist_hyperparameter_search_artifacts(
+        search_rows,
+        best_payload,
+        metrics_dir=metrics_dir,
+        reports_dir=reports_dir,
+    )
+
+
+def _build_config_snapshot(settings: AppSettings) -> dict[str, Any]:
+    return {
+        "project": {
+            "name": settings.project.name,
+            "version": settings.project.version,
+            "random_state": settings.project.random_state,
+        },
+        "dataset": {
+            "input_path": relative_to_root(settings.dataset.input_path, settings.project_root),
+            "id_column": settings.dataset.id_column,
+            "text_column": settings.dataset.text_column,
+            "target_column": settings.dataset.target_column,
+        },
+        "preprocessing": {
+            "clean_text_column": settings.preprocessing.clean_text_column,
+            "normalize_whitespace": settings.preprocessing.normalize_whitespace,
+        },
+        "training": {
+            "models": list(settings.training.models),
+            "representations": list(settings.training.representations),
+            "selection_metric": settings.training.selection_metric,
+        },
+        "hyperparameter_search": {
+            "enabled": settings.hyperparameter_search.enabled,
+            "strategy": settings.hyperparameter_search.strategy,
+            "refit_metric": settings.hyperparameter_search.refit_metric,
+        },
+    }
+
+
+def _mirror_latest_model_artifacts(latest_dir: Path, artifacts: tuple[Path, ...]) -> None:
+    models_dir = latest_dir / "models"
+    models_dir.mkdir(parents=True, exist_ok=True)
+    for artifact in artifacts:
+        if artifact.exists() and artifact.is_file():
+            shutil.copy2(artifact, models_dir / artifact.name)
 
 
 # Valida nomes de modelos, representações e métrica de seleção configurados
@@ -586,6 +764,8 @@ def build_best_experiment_payload(
     val_df: pd.DataFrame,
     best_model_path: Path,
     experiment_results_path: Path,
+    best_bundle_path: Path,
+    search_artifacts: HyperparameterSearchArtifacts,
 ) -> dict[str, Any]:
 
     target_column = settings.dataset.target_column
@@ -615,12 +795,14 @@ def build_best_experiment_payload(
         },
         "outputs": {
             "best_model_path": relative_to_root(best_model_path, settings.project_root),
-            "best_experiment_path": relative_to_root(
-                settings.outputs.model_dir / "best_experiment.json",
-                settings.project_root,
-            ),
+            "best_bundle_path": relative_to_root(best_bundle_path, settings.project_root),
+            "best_experiment_path": relative_to_root(best_model_path.parent / "best_experiment.json", settings.project_root),
             "experiment_results_path": relative_to_root(experiment_results_path, settings.project_root),
+            "hyperparameter_results_path": relative_to_root(search_artifacts.results_path, settings.project_root),
+            "best_hyperparameters_path": relative_to_root(search_artifacts.best_params_path, settings.project_root),
+            "hyperparameter_report_path": relative_to_root(search_artifacts.report_path, settings.project_root),
         },
+        "hyperparameter_search": search_artifacts.best_hyperparameters,
         "experiments": experiments,
     }
 
