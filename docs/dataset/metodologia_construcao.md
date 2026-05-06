@@ -2,7 +2,7 @@
 
 ## Fontes
 
-A usa obras literárias em português disponíveis em acervos públicos, principalmente Project Gutenberg.
+A construção do dataset usa obras literárias em português disponíveis em acervos públicos, principalmente Project Gutenberg.
 
 Cada registro mantém metadados de origem:
 
