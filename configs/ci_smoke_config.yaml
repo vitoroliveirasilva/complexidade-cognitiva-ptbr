@@ -1,0 +1,129 @@
+project:
+  name: "complexidade-cognitiva-ptbr-ci-smoke"
+  version: "0.1.0"
+  description: "Configuração rápida para CI e smoke test sem depender do dataset oficial."
+  language: "pt-BR"
+  random_state: 42
+
+dataset:
+  input_path: "tests/fixtures/smoke_dataset.csv"
+  id_column: "id"
+  text_column: "texto"
+  target_column: "target"
+  split:
+    train_size: 0.60
+    val_size: 0.20
+    test_size: 0.20
+    stratify: true
+
+preprocessing:
+  preserve_original_text: true
+  clean_text_column: "texto_limpo"
+  normalize_whitespace: true
+
+features:
+  output_dir: "outputs/ci_smoke/data/features"
+  long_word_min_chars: 7
+  tfidf:
+    word:
+      enabled: true
+      max_features: 300
+      ngram_range: [1, 2]
+      min_df: 1
+    char:
+      enabled: false
+      max_features: 200
+      ngram_range: [3, 5]
+      min_df: 1
+
+training:
+  models:
+    - "logistic_regression"
+  representations:
+    - "tfidf_word"
+  selection_metric: "f1_macro"
+
+cross_validation:
+  enabled: true
+  method: "stratified_kfold"
+  n_splits: 3
+  n_repeats: 1
+  shuffle: true
+  random_state: 42
+  scoring:
+    - "accuracy"
+    - "f1_macro"
+    - "balanced_accuracy"
+
+leakage_checks:
+  enabled: true
+  check_id_overlap: true
+  check_exact_text_overlap: true
+  check_normalized_text_overlap: true
+  check_near_duplicates: false
+  near_duplicate_threshold: 0.92
+  check_target_like_columns: true
+  fail_on_critical_leakage: true
+
+hyperparameter_search:
+  enabled: false
+  strategy: "grid"
+  refit_metric: "f1_macro"
+  n_jobs: 1
+  verbose: 0
+  save_all_results: true
+  search_spaces:
+    logistic_regression:
+      C: [1.0]
+      max_iter: [1000]
+      class_weight: [null]
+
+explainability:
+  enabled: true
+  top_n_terms_per_class: 8
+  generate_global_tfidf_coefficients: true
+  generate_local_explanations: true
+  sample_predictions_per_class: 1
+  output_format:
+    - "json"
+    - "csv"
+    - "md"
+
+run_tracking:
+  enabled: true
+  run_id_format: "%Y%m%d_%H%M%S"
+  create_latest_pointer: true
+  copy_config_snapshot: true
+  save_environment: true
+  save_dataset_fingerprint: true
+  save_git_commit: true
+
+inference:
+  enabled: true
+  default_model_path: "outputs/ci_smoke/latest/models/best_model_bundle.joblib"
+  include_probabilities: true
+  include_linguistic_metrics: true
+  include_explanations: true
+
+visual_reports:
+  enabled: true
+  dpi: 120
+  generate_normalized_confusion_matrix: true
+  generate_experiment_comparison_chart: true
+  generate_cv_summary_chart: true
+  generate_feature_distribution_charts: false
+  generate_top_terms_chart: true
+  generate_prediction_confidence_chart: true
+
+outputs:
+  processed_dir: "outputs/ci_smoke/data/processed"
+  model_dir: "outputs/ci_smoke/models"
+  metrics_dir: "outputs/ci_smoke/metrics"
+  figures_dir: "outputs/ci_smoke/figures"
+  reports_dir: "outputs/ci_smoke/reports"
+  runs_dir: "outputs/ci_smoke/runs"
+  latest_dir: "outputs/ci_smoke/latest"
+
+logging:
+  level: "INFO"
+  format: "text"
