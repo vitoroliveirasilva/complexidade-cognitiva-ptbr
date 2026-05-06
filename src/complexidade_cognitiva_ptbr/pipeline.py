@@ -11,10 +11,12 @@ from .data.preprocessing import (
     PreparationResult,
     prepare_dataset,
 )
+from .data.leakage import LeakageCheckResult, run_leakage_checks
 from .evaluation.reporting import (
     EvaluationResult,
     evaluate_model,
 )
+from .evaluation.cross_validation import CrossValidationResult, run_cross_validation
 from .features.build_features import (
     FeatureBuildResult,
     build_feature_datasets,
@@ -28,6 +30,7 @@ from .utils.paths import (
     ensure_project_directories,
     relative_to_root,
 )
+from .utils.run_context import RunContext
 
 _JSON_INDENT = 2
 _ResultT = TypeVar("_ResultT")
@@ -86,6 +89,7 @@ class PipelineBootstrapResult:
     managed_directories: tuple[str, ...]
     required_dataset_columns: tuple[str, ...]
     random_state: int
+    run_context: dict[str, str] | None = None
 
     def to_dict(self) -> dict[str, Any]:
 
@@ -98,6 +102,7 @@ class PipelineBootstrapResult:
             "managed_directories": list(self.managed_directories),
             "required_dataset_columns": list(self.required_dataset_columns),
             "random_state": self.random_state,
+            "run_context": self.run_context,
         }
 
     def to_json(self) -> str:
@@ -154,6 +159,7 @@ class CognitiveComplexityPipeline:
             raise ValueError(msg)
 
         self.settings = settings
+        self.run_context = RunContext.create(settings)
         self.logger = get_logger(self.__class__.__name__)
 
     # Constrói o pipeline a partir do arquivo de configuração
@@ -187,6 +193,7 @@ class CognitiveComplexityPipeline:
             managed_directories=relative_directories,
             required_dataset_columns=tuple(self.settings.required_dataset_columns),
             random_state=self.settings.project.random_state,
+            run_context=self.run_context.to_dict(self.settings.project_root),
         )
 
         self.logger.info(
@@ -244,6 +251,33 @@ class CognitiveComplexityPipeline:
             payload=result.to_dict(self.settings.project_root),
         )
 
+    # Executa as verificações de vazamento entre treino, validação e teste
+    def detect_leakage(self) -> PipelineStageResult:
+
+        stage = "detect_leakage"
+        bootstrap = self.bootstrap(stage=stage)
+
+        result: LeakageCheckResult = self._execute_stage(
+            stage=stage,
+            start_message="Iniciando verificações de vazamento experimental entre splits.",
+            success_message="Verificações de vazamento concluídas.",
+            action=lambda: run_leakage_checks(
+                self.settings,
+                metrics_dir=self.run_context.metrics_dir,
+                reports_dir=self.run_context.reports_dir,
+            ),
+        )
+        self.logger.info(
+            "Relatório de vazamento salvo em %s.",
+            relative_to_root(result.report_json_path, self.settings.project_root),
+        )
+
+        return PipelineStageResult(
+            stage=stage,
+            bootstrap=bootstrap,
+            payload=result.to_dict(self.settings.project_root),
+        )
+
     # Executa a etapa de extração de features linguísticas
     def build_features(self) -> PipelineStageResult:
 
@@ -270,6 +304,34 @@ class CognitiveComplexityPipeline:
             payload=result.to_dict(self.settings.project_root),
         )
 
+    # Executa validação cruzada estratificada no conjunto treino+validação
+    def cross_validate(self) -> PipelineStageResult:
+
+        stage = "cross_validate"
+        bootstrap = self.bootstrap(stage=stage)
+
+        result: CrossValidationResult = self._execute_stage(
+            stage=stage,
+            start_message="Iniciando validação cruzada estratificada.",
+            success_message="Validação cruzada concluída.",
+            action=lambda: run_cross_validation(
+                self.settings,
+                metrics_dir=self.run_context.metrics_dir,
+                reports_dir=self.run_context.reports_dir,
+                figures_dir=self.run_context.figures_dir,
+            ),
+        )
+        self.logger.info(
+            "Resultados de validação cruzada salvos em %s.",
+            relative_to_root(result.results_path, self.settings.project_root),
+        )
+
+        return PipelineStageResult(
+            stage=stage,
+            bootstrap=bootstrap,
+            payload=result.to_dict(self.settings.project_root),
+        )
+
     # Executa a etapa de treinamento e seleção do melhor experimento
     def train_model(self) -> PipelineStageResult:
 
@@ -280,7 +342,13 @@ class CognitiveComplexityPipeline:
             stage=stage,
             start_message="Iniciando treinamento e comparação de modelos supervisionados.",
             success_message="Treinamento concluído.",
-            action=lambda: train_model(self.settings),
+            action=lambda: train_model(
+                    self.settings,
+                    model_dir=self.run_context.models_dir,
+                    metrics_dir=self.run_context.metrics_dir,
+                    reports_dir=self.run_context.reports_dir,
+                    latest_dir=self.run_context.latest_dir,
+                ),
         )
         self.logger.info(
             "Melhor modelo salvo em %s.",
@@ -303,7 +371,14 @@ class CognitiveComplexityPipeline:
             stage=stage,
             start_message="Iniciando avaliação final do melhor modelo no conjunto de teste.",
             success_message="Avaliação concluída.",
-            action=lambda: evaluate_model(self.settings),
+            action=lambda: evaluate_model(
+                    self.settings,
+                    model_dir=self.run_context.models_dir,
+                    metrics_dir=self.run_context.metrics_dir,
+                    figures_dir=self.run_context.figures_dir,
+                    reports_dir=self.run_context.reports_dir,
+                    explainability_dir=self.run_context.explainability_dir,
+                ),
         )
         self.logger.info(
             "Relatório final salvo em %s.",
@@ -321,8 +396,12 @@ class CognitiveComplexityPipeline:
 
         stages = (
             self.prepare_dataset(),
+            self.detect_leakage(),
             self.build_features(),
+            self.cross_validate(),
             self.train_model(),
             self.evaluate_model(),
         )
+        if self.settings.run_tracking.create_latest_pointer:
+            self.run_context.update_latest_pointer()
         return PipelineRunResult(stage="run_pipeline", stages=stages)
