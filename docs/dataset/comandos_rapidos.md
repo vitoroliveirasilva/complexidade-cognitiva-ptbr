@@ -1,24 +1,63 @@
 # Comandos rápidos - Dataset
 
-## 1. Baixar fontes
+Este guia resume os comandos principais para gerar, auditar e usar o dataset.
+
+## 1. Baixar as fontes
 
 ```powershell
 python scripts/dataset_download_sources.py
 ```
 
-## 2. Gerar dataset
+## 2. Gerar o dataset
 
 ```powershell
 python scripts/dataset_build.py
 ```
 
-## 3. Auditar dataset
+Esse comando gera:
+
+```text
+data/raw/dataset_candidate.csv
+data/raw/dataset.csv
+docs/dataset_card.md
+```
+
+## 3. Gerar apenas o candidato
+
+Para criar o dataset candidato sem sobrescrever `data/raw/dataset.csv`:
+
+```powershell
+python scripts/dataset_build.py --no-write-main
+```
+
+Depois de auditar e aprovar o candidato:
+
+```powershell
+python scripts/dataset_promote.py --candidate data/raw/dataset_candidate.csv --output data/raw/dataset.csv --backup-existing
+```
+
+## 4. Auditar o dataset
 
 ```powershell
 python scripts/dataset_audit.py
 ```
 
-## 4. Rodar pipeline com o dataset
+Relatórios gerados:
+
+```text
+outputs/metrics/dataset_quality_report.json
+outputs/reports/dataset_quality_report.md
+```
+
+Para visualizar no PowerShell:
+
+```powershell
+Get-Content outputs/reports/dataset_quality_report.md
+```
+
+## 5. Rodar o pipeline completo
+
+Depois de gerar e auditar o dataset:
 
 ```powershell
 python scripts/run_pipeline.py
@@ -28,21 +67,31 @@ python -m pytest
 ruff check .
 ```
 
-## 5. Conferir relatórios principais
+## 6. Conferir a última execução
 
 ```powershell
-Get-Content outputs/metrics/dataset_quality_report.md
 Get-Content outputs/latest/run_id.txt
 ```
 
-## 6. Se quiser gerar apenas candidato sem sobrescrever data/raw/dataset.csv
+Depois use o `run_id` para consultar artefatos em:
 
-```powershell
-python scripts/dataset_build.py --no-write-main
+```text
+outputs/runs/<run_id>/
 ```
 
-Depois de auditar:
+## 7. Fluxo completo recomendado
 
 ```powershell
-python scripts/dataset_promote.py --candidate data/raw/dataset_candidate.csv --output data/raw/dataset.csv --backup-existing
+python scripts/dataset_download_sources.py
+python scripts/dataset_build.py
+python scripts/dataset_audit.py
+python scripts/run_pipeline.py
+python scripts/validate_artifacts.py --profile complete
+python scripts/predict_text.py --text "O narrador reorganiza lembranças, símbolos e ambiguidades para construir uma interpretação instável dos acontecimentos."
+python -m pytest
+ruff check .
 ```
+
+## Observação
+
+Como o dataset final é gerado localmente, ele não é versionado.
