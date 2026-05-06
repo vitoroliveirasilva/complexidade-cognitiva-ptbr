@@ -589,7 +589,7 @@ def main() -> int:
                 continue
             candidates.append(
                 {
-                    "id_base": f"v3_{slug}_{idx:05d}_{h}",
+                    "id_base": f"{slug}_{idx:05d}_{h}",
                     "texto": window,
                     "fonte": meta.source,
                     "autor": meta.author,
@@ -689,7 +689,7 @@ def main() -> int:
     for i, row in enumerate(selected, start=1):
         output_rows.append(
             {
-                "id": f"v3_{i:06d}",
+                "id": f"{i:06d}",
                 "texto": row["texto"],
                 "target": row["target"],
                 "fonte": row["fonte"],
