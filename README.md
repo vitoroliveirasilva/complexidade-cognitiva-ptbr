@@ -65,13 +65,19 @@ complexidade-cognitiva-ptbr/
 │   ├── figures/
 │   ├── metrics/
 │   ├── models/
-│   └── reports/
+│   ├── reports/
+│   ├── runs/
+│   └── latest/
 ├── scripts/
 │   ├── build_features.py
 │   ├── evaluate_model.py
 │   ├── prepare_dataset.py
 │   ├── run_pipeline.py
-│   └── train_model.py
+│   ├── train_model.py
+│   ├── explain_model.py
+│   ├── predict_text.py
+│   ├── predict_file.py
+│   └── validate_artifacts.py
 ├── src/
 │   └── complexidade_cognitiva_ptbr/
 │       ├── __init__.py
@@ -315,6 +321,46 @@ Os testes cobrem:
 - extração de métricas linguísticas;
 - treinamento mínimo;
 - avaliação final e geração de artefatos.
+
+## Melhorias experimentais implementadas
+
+O pipeline inclui recursos de robustez e rastreabilidade:
+
+- versionamento de execuções em `outputs/runs/<run_id>/`;
+- ponteiro da última execução em `outputs/latest/run_id.txt`;
+- fingerprint do dataset bruto sem alterar o arquivo oficial;
+- detecção de vazamento entre treino, validação e teste;
+- validação cruzada estratificada;
+- busca configurável de hiperparâmetros;
+- `ModelBundle` persistido para inferência local;
+- scripts `predict_text.py` e `predict_file.py`;
+- explicabilidade global por coeficientes TF-IDF, quando suportada;
+- explicações locais, gráficos avançados e relatório final estendido;
+- validação objetiva de artefatos com `scripts/validate_artifacts.py`;
+- CI no GitHub Actions com lint, testes, cobertura e smoke test sem dataset oficial.
+
+### Execução final recomendada
+
+```bash
+python scripts/run_pipeline.py --bootstrap-only
+python scripts/run_pipeline.py
+python scripts/validate_artifacts.py --profile complete
+python scripts/predict_text.py --text "Texto literário de exemplo para classificação."
+python -m pytest
+ruff check .
+```
+
+### Smoke test sem dataset oficial
+
+Para validar o projeto sem usar `data/raw/dataset.csv`, rode:
+
+```bash
+python scripts/run_pipeline.py --config configs/ci_smoke_config.yaml
+python scripts/validate_artifacts.py --config configs/ci_smoke_config.yaml --profile smoke
+python scripts/predict_text.py --config configs/ci_smoke_config.yaml --text "Texto literário de exemplo para classificação."
+```
+
+Veja também `docs/guia_validacao_final.md`.
 
 ## Versionamento no Git
 
