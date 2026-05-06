@@ -28,8 +28,16 @@ from sklearn.metrics import (
 
 from ..config.settings import AppSettings
 from ..data.io import read_csv_dataset, write_csv_dataset, write_json
-from ..models.train import merge_prepared_and_features
+from ..models.train import merge_prepared_and_features, prepare_model_frame
 from ..utils.paths import relative_to_root
+from .explainability import ExplainabilityResult, generate_explainability_artifacts
+from .visualization import (
+    save_confusion_matrix_plot,
+    save_cv_summary_chart,
+    save_experiment_comparison_chart,
+    save_feature_distribution_charts,
+    save_prediction_confidence_chart,
+)
 
 
 class EvaluationError(RuntimeError):
@@ -45,7 +53,11 @@ class EvaluationResult:
     classification_report_txt_path: Path
     test_predictions_path: Path
     confusion_matrix_path: Path
+    confusion_matrix_normalized_path: Path | None
     final_report_path: Path
+    final_report_extended_path: Path
+    visual_report_paths: tuple[Path, ...]
+    explainability_result: ExplainabilityResult | None
     final_metrics: dict[str, Any]
 
     def to_dict(self, project_root: Path | None = None) -> dict[str, Any]:
@@ -57,7 +69,11 @@ class EvaluationResult:
                 "classification_report_txt_path": self.classification_report_txt_path.as_posix(),
                 "test_predictions_path": self.test_predictions_path.as_posix(),
                 "confusion_matrix_path": self.confusion_matrix_path.as_posix(),
+                "confusion_matrix_normalized_path": self.confusion_matrix_normalized_path.as_posix() if self.confusion_matrix_normalized_path else None,
                 "final_report_path": self.final_report_path.as_posix(),
+                "final_report_extended_path": self.final_report_extended_path.as_posix(),
+                "visual_report_paths": [path.as_posix() for path in self.visual_report_paths],
+                "explainability_result": self.explainability_result.to_dict() if self.explainability_result else None,
                 "final_metrics": self.final_metrics,
             }
 
@@ -73,23 +89,37 @@ class EvaluationResult:
             ),
             "test_predictions_path": relative_to_root(self.test_predictions_path, project_root),
             "confusion_matrix_path": relative_to_root(self.confusion_matrix_path, project_root),
+            "confusion_matrix_normalized_path": relative_to_root(self.confusion_matrix_normalized_path, project_root) if self.confusion_matrix_normalized_path else None,
             "final_report_path": relative_to_root(self.final_report_path, project_root),
+            "final_report_extended_path": relative_to_root(self.final_report_extended_path, project_root),
+            "visual_report_paths": [relative_to_root(path, project_root) for path in self.visual_report_paths],
+            "explainability_result": self.explainability_result.to_dict(project_root) if self.explainability_result else None,
             "final_metrics": self.final_metrics,
         }
 
 
 # Avalia o melhor modelo no conjunto de teste e salva os artefatos finais
-def evaluate_model(settings: AppSettings) -> EvaluationResult:
+def evaluate_model(
+    settings: AppSettings,
+    *,
+    model_dir: Path | None = None,
+    metrics_dir: Path | None = None,
+    figures_dir: Path | None = None,
+    reports_dir: Path | None = None,
+    explainability_dir: Path | None = None,
+) -> EvaluationResult:
 
-    model = load_best_model(settings)
-    best_experiment = load_best_experiment(settings)
+    model = load_best_model(settings, model_dir=model_dir)
+    best_experiment = load_best_experiment(settings, model_dir=model_dir)
     test_df = load_test_frame(settings)
     validate_test_frame(test_df, settings)
 
     target_column = settings.dataset.target_column
     id_column = settings.dataset.id_column
+    text_column = _resolve_evaluation_text_column(test_df, settings)
+    feature_columns = _resolve_feature_columns_from_test(test_df)
 
-    x_test = test_df.drop(columns=[target_column])
+    x_test = prepare_model_frame(test_df, target_column, text_column, feature_columns)
     y_true = _series_to_labels(test_df[target_column])
     y_pred = _predict_labels(model, x_test)
     labels = _resolve_labels(y_true, y_pred)
@@ -103,12 +133,14 @@ def evaluate_model(settings: AppSettings) -> EvaluationResult:
         best_experiment=best_experiment,
     )
 
-    metrics_dir = settings.outputs.metrics_dir
-    figures_dir = settings.outputs.figures_dir
-    reports_dir = settings.outputs.reports_dir
+    metrics_dir = metrics_dir or settings.outputs.metrics_dir
+    figures_dir = figures_dir or settings.outputs.figures_dir
+    reports_dir = reports_dir or settings.outputs.reports_dir
+    explainability_dir = explainability_dir or settings.outputs.latest_dir / "explainability"
     metrics_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
     reports_dir.mkdir(parents=True, exist_ok=True)
+    explainability_dir.mkdir(parents=True, exist_ok=True)
 
     final_metrics_path = write_json(final_metrics, metrics_dir / "final_metrics.json")
     classification_report_json_path = write_json(
@@ -130,27 +162,123 @@ def evaluate_model(settings: AppSettings) -> EvaluationResult:
         ),
         metrics_dir / "test_predictions.csv",
     )
-    confusion_matrix_path = save_confusion_matrix_figure(
+
+    visual_paths: list[Path] = []
+    confusion_matrix_path = save_confusion_matrix_plot(
+        y_true=y_true,
+        y_pred=y_pred,
+        labels=labels,
+        output_path=figures_dir / "confusion_matrix_absolute.png",
+        normalized=False,
+        dpi=settings.visual_reports.dpi,
+    )
+    visual_paths.append(confusion_matrix_path)
+    legacy_confusion_path = save_confusion_matrix_figure(
         y_true=y_true,
         y_pred=y_pred,
         labels=labels,
         output_path=figures_dir / "confusion_matrix.png",
     )
+
+    confusion_matrix_normalized_path: Path | None = None
+    if settings.visual_reports.enabled and settings.visual_reports.generate_normalized_confusion_matrix:
+        confusion_matrix_normalized_path = save_confusion_matrix_plot(
+            y_true=y_true,
+            y_pred=y_pred,
+            labels=labels,
+            output_path=figures_dir / "confusion_matrix_normalized.png",
+            normalized=True,
+            dpi=settings.visual_reports.dpi,
+        )
+        visual_paths.append(confusion_matrix_normalized_path)
+
+    if settings.visual_reports.enabled and settings.visual_reports.generate_experiment_comparison_chart:
+        experiment_chart = save_experiment_comparison_chart(
+            experiment_results_path=(model_dir or settings.outputs.model_dir) / "experiment_results.csv",
+            output_path=figures_dir / f"experiment_comparison_{settings.training.selection_metric}.png",
+            metric=settings.training.selection_metric,
+            dpi=settings.visual_reports.dpi,
+        )
+        if experiment_chart:
+            visual_paths.append(experiment_chart)
+
+    if settings.visual_reports.enabled and settings.visual_reports.generate_cv_summary_chart:
+        cv_chart = save_cv_summary_chart(
+            cv_summary_path=metrics_dir / "cv_summary.json",
+            output_path=figures_dir / f"cv_summary_{settings.training.selection_metric}.png",
+            metric=settings.training.selection_metric,
+            dpi=settings.visual_reports.dpi,
+        )
+        if cv_chart:
+            visual_paths.append(cv_chart)
+
+    if settings.visual_reports.enabled and settings.visual_reports.generate_feature_distribution_charts:
+        visual_paths.extend(
+            save_feature_distribution_charts(
+                test_df=test_df,
+                settings=settings,
+                figures_dir=figures_dir,
+            )
+        )
+
+    if settings.visual_reports.enabled and settings.visual_reports.generate_prediction_confidence_chart:
+        confidence_chart = save_prediction_confidence_chart(
+            model=model,
+            x_test=x_test,
+            labels=labels,
+            output_path=figures_dir / "prediction_confidence_distribution.png",
+            dpi=settings.visual_reports.dpi,
+        )
+        if confidence_chart:
+            visual_paths.append(confidence_chart)
+
+    explainability_result = generate_explainability_artifacts(
+        settings=settings,
+        model=model,
+        best_experiment=best_experiment,
+        test_df=test_df,
+        y_pred=y_pred,
+        explainability_dir=explainability_dir,
+        figures_dir=figures_dir,
+    )
+    visual_paths.extend(explainability_result.top_terms_figure_paths)
+
+    output_paths = {
+        "final_metrics": final_metrics_path,
+        "classification_report_json": classification_report_json_path,
+        "classification_report_txt": classification_report_txt_path,
+        "test_predictions": test_predictions_path,
+        "confusion_matrix": legacy_confusion_path,
+        "confusion_matrix_absolute": confusion_matrix_path,
+        "final_report_extended": reports_dir / "final_report_extended.md",
+        "explainability_report": explainability_result.report_path,
+    }
+    if confusion_matrix_normalized_path is not None:
+        output_paths["confusion_matrix_normalized"] = confusion_matrix_normalized_path
+
     final_report_path = write_text_file(
         build_final_report_markdown(
             settings=settings,
             final_metrics=final_metrics,
             best_experiment=best_experiment,
             labels=labels,
-            output_paths={
-                "final_metrics": final_metrics_path,
-                "classification_report_json": classification_report_json_path,
-                "classification_report_txt": classification_report_txt_path,
-                "test_predictions": test_predictions_path,
-                "confusion_matrix": confusion_matrix_path,
-            },
+            output_paths=output_paths,
         ),
         reports_dir / "final_report.md",
+    )
+    final_report_extended_path = write_text_file(
+        build_final_report_extended_markdown(
+            settings=settings,
+            final_metrics=final_metrics,
+            best_experiment=best_experiment,
+            labels=labels,
+            output_paths={**output_paths, "final_report": final_report_path},
+            visual_paths=tuple(dict.fromkeys(visual_paths)),
+            explainability_result=explainability_result,
+            metrics_dir=metrics_dir,
+            reports_dir=reports_dir,
+        ),
+        reports_dir / "final_report_extended.md",
     )
 
     return EvaluationResult(
@@ -158,16 +286,19 @@ def evaluate_model(settings: AppSettings) -> EvaluationResult:
         classification_report_json_path=classification_report_json_path,
         classification_report_txt_path=classification_report_txt_path,
         test_predictions_path=test_predictions_path,
-        confusion_matrix_path=confusion_matrix_path,
+        confusion_matrix_path=legacy_confusion_path,
+        confusion_matrix_normalized_path=confusion_matrix_normalized_path,
         final_report_path=final_report_path,
+        final_report_extended_path=final_report_extended_path,
+        visual_report_paths=tuple(dict.fromkeys(visual_paths)),
+        explainability_result=explainability_result,
         final_metrics=final_metrics,
     )
 
-
 # Carrega o melhor pipeline serializado pela etapa de treinamento
-def load_best_model(settings: AppSettings) -> Any:
+def load_best_model(settings: AppSettings, *, model_dir: Path | None = None) -> Any:
 
-    model_path = settings.outputs.model_dir / "best_model.joblib"
+    model_path = (model_dir or settings.outputs.model_dir) / "best_model.joblib"
     if not model_path.exists():
         raise EvaluationError(
             f"Modelo treinado não encontrado: {model_path}. Execute primeiro scripts/train_model.py."
@@ -189,9 +320,9 @@ def load_best_model(settings: AppSettings) -> Any:
 
 
 # Carrega o relatório do melhor experimento selecionado em validação
-def load_best_experiment(settings: AppSettings) -> dict[str, Any]:
+def load_best_experiment(settings: AppSettings, *, model_dir: Path | None = None) -> dict[str, Any]:
 
-    path = settings.outputs.model_dir / "best_experiment.json"
+    path = (model_dir or settings.outputs.model_dir) / "best_experiment.json"
     if not path.exists():
         raise EvaluationError(
             f"Arquivo do melhor experimento não encontrado: {path}. Execute primeiro scripts/train_model.py."
@@ -567,6 +698,177 @@ def build_final_report_markdown(
         lines.append(f"- Quantidade de features linguísticas consideradas no treino: `{feature_count}`")
 
     return "\n".join(lines) + "\n"
+
+# Gera relatório consolidado com evidências de CV, leakage, hiperparâmetros, explicabilidade e gráficos
+def build_final_report_extended_markdown(
+    settings: AppSettings,
+    final_metrics: dict[str, Any],
+    best_experiment: dict[str, Any],
+    labels: list[str],
+    output_paths: dict[str, Path],
+    visual_paths: tuple[Path, ...],
+    explainability_result: ExplainabilityResult | None,
+    metrics_dir: Path,
+    reports_dir: Path,
+) -> str:
+    selected = _required_mapping(final_metrics, "selected_experiment")
+    metrics = _required_mapping(final_metrics, "test_metrics")
+    dataset_info = _required_mapping(final_metrics, "evaluation_dataset")
+    run_dir = reports_dir.parent if reports_dir.name == "reports" else reports_dir
+
+    leakage_payload = _read_optional_json(metrics_dir / "leakage_report.json")
+    cv_summary = _read_optional_json(metrics_dir / "cv_summary.json")
+    best_hyperparameters = _read_optional_json(metrics_dir / "best_hyperparameters.json")
+    data_fingerprint = _read_optional_json(run_dir / "data_fingerprint.json")
+
+    lines = [
+        "# Relatório final estendido",
+        "",
+        "## Identificação da execução",
+        "",
+        f"- Projeto: `{_markdown_inline(settings.project.name)}`",
+        f"- Versão: `{_markdown_inline(settings.project.version)}`",
+        f"- Gerado em UTC: `{_markdown_inline(str(final_metrics['generated_at_utc']))}`",
+        f"- Seed configurada: `{settings.project.random_state}`",
+        f"- Classes avaliadas: `{_markdown_inline(', '.join(labels))}`",
+        "",
+        "## Dataset e rastreabilidade",
+        "",
+        f"- Split avaliado: `{dataset_info.get('split')}`",
+        f"- Registros no teste: `{dataset_info.get('rows')}`",
+    ]
+
+    dataset_hash = None
+    if isinstance(data_fingerprint, dict):
+        dataset = data_fingerprint.get("dataset")
+        if isinstance(dataset, dict):
+            dataset_hash = dataset.get("sha256") or dataset.get("hash_sha256")
+            dataset_path = dataset.get("path")
+            if dataset_path:
+                lines.append(f"- Dataset bruto: `{_markdown_inline(str(dataset_path))}`")
+            if dataset_hash:
+                lines.append(f"- SHA-256 do dataset bruto: `{_markdown_inline(str(dataset_hash))}`")
+    if not dataset_hash:
+        lines.append("- Fingerprint do dataset: não localizado nesta execução.")
+
+    lines.extend(
+        [
+            "",
+            "## Melhor experimento",
+            "",
+            f"- Experimento: `{_markdown_inline(str(selected['experiment_id']))}`",
+            f"- Representação: `{_markdown_inline(str(selected['representation']))}`",
+            f"- Modelo: `{_markdown_inline(str(selected['model_name']))}`",
+            f"- Métrica de seleção: `{_markdown_inline(str(selected['selection_metric']))}`",
+            f"- Pontuação de validação: `{selected['best_validation_score']}`",
+            "",
+            "## Métricas finais no teste",
+            "",
+            "| Métrica | Valor |",
+            "| --- | ---: |",
+        ]
+    )
+    for metric_name, metric_value in metrics.items():
+        lines.append(f"| {_markdown_cell(str(metric_name))} | {metric_value} |")
+
+    lines.extend(["", "## Validação cruzada", ""])
+    if isinstance(cv_summary, dict) and cv_summary.get("summary"):
+        summary = cv_summary["summary"]
+        lines.append(f"- Experimentos avaliados em CV: `{summary.get('total_experiments')}`")
+        lines.append(f"- Melhor experimento em CV: `{summary.get('best_experiment_id')}`")
+        lines.append(f"- Média da métrica de seleção: `{summary.get('best_selection_metric_mean')}`")
+    else:
+        lines.append("- Resumo de validação cruzada não localizado ou etapa desabilitada.")
+
+    lines.extend(["", "## Vazamento de dados", ""])
+    if isinstance(leakage_payload, dict):
+        summary = leakage_payload.get("summary", {})
+        critical = summary.get("critical_findings", leakage_payload.get("critical_findings", 0)) if isinstance(summary, dict) else 0
+        warnings = summary.get("warning_findings", leakage_payload.get("warning_findings", 0)) if isinstance(summary, dict) else 0
+        status = leakage_payload.get("status") or summary.get("status", "registrado") if isinstance(summary, dict) else "registrado"
+        lines.append(f"- Status: `{status}`")
+        lines.append(f"- Achados críticos: `{critical}`")
+        lines.append(f"- Alertas: `{warnings}`")
+    else:
+        lines.append("- Relatório de vazamento não localizado nesta execução.")
+
+    lines.extend(["", "## Hiperparâmetros", ""])
+    if isinstance(best_hyperparameters, dict):
+        best = best_hyperparameters.get("best_experiment", {})
+        params = best.get("best_params", {}) if isinstance(best, dict) else {}
+        lines.append(f"- Estratégia: `{best_hyperparameters.get('strategy', 'n/a')}`")
+        if params:
+            lines.extend(["", "| Parâmetro | Valor |", "| --- | --- |"])
+            for name, value in params.items():
+                lines.append(f"| {_markdown_cell(str(name))} | `{_markdown_inline(str(value))}` |")
+        else:
+            lines.append("- Busca sem parâmetros selecionados ou etapa desabilitada.")
+    else:
+        lines.append("- Arquivo de melhores hiperparâmetros não localizado.")
+
+    lines.extend(["", "## Explicabilidade", ""])
+    if explainability_result is not None:
+        summary = explainability_result.summary
+        lines.append(f"- Status: `{summary.get('status')}`")
+        lines.append(f"- Features TF-IDF explicáveis: `{summary.get('tfidf_features', 0)}`")
+        lines.append(f"- Relatório: `{relative_to_root(explainability_result.report_path, settings.project_root)}`")
+        if summary.get("reason"):
+            lines.append(f"- Observação: {summary.get('reason')}")
+    else:
+        lines.append("- Explicabilidade não executada.")
+
+    lines.extend(["", "## Gráficos e artefatos visuais", ""])
+    if visual_paths:
+        for path in visual_paths:
+            lines.append(f"- `{relative_to_root(path, settings.project_root)}`")
+    else:
+        lines.append("- Nenhum gráfico adicional foi gerado nesta execução.")
+
+    lines.extend(["", "## Arquivos principais", ""])
+    for name, path in output_paths.items():
+        lines.append(f"- `{_markdown_inline(name)}`: `{relative_to_root(path, settings.project_root)}`")
+
+    lines.extend(
+        [
+            "",
+            "## Observações metodológicas automáticas",
+            "",
+            "O conjunto de teste é usado apenas na avaliação final, depois da seleção do melhor experimento por validação.",
+            "",
+            "Os artefatos de validação cruzada, vazamento, hiperparâmetros e explicabilidade complementam as métricas finais, reduzindo o risco de interpretar um resultado alto sem evidências experimentais.",
+            "",
+            "Quando o modelo selecionado não for linear com TF-IDF, a etapa de explicabilidade registra a limitação em vez de interromper a execução.",
+        ]
+    )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _resolve_evaluation_text_column(test_df: pd.DataFrame, settings: AppSettings) -> str:
+    if settings.preprocessing.clean_text_column in test_df.columns:
+        return settings.preprocessing.clean_text_column
+    return settings.dataset.text_column
+
+
+def _resolve_feature_columns_from_test(test_df: pd.DataFrame) -> list[str]:
+    return [column for column in _known_feature_columns() if column in test_df.columns]
+
+
+def _known_feature_columns() -> list[str]:
+    try:
+        from ..features.build_features import get_feature_columns
+
+        return get_feature_columns()
+    except Exception:
+        return []
+
+
+def _read_optional_json(path: Path) -> dict[str, Any] | None:
+    if not path.exists() or not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
 
 
 # Salva arquivo textual em UTF-8 de forma atômica
