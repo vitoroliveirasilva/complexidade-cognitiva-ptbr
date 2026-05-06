@@ -1,0 +1,69 @@
+project:
+  name: complexidade-cognitiva-ptbr
+  dataset_version: v3
+  random_state: 42
+
+paths:
+  sources_csv: data/external/public_domain_sources.csv
+  raw_text_dir: data/external/public_domain_texts
+  manifest_path: outputs/metrics/dataset_download_manifest.json
+  dataset_candidate_path: data/raw/dataset_candidate.csv
+  dataset_main_path: data/raw/dataset.csv
+  dataset_card_path: docs/dataset_card.md
+  audit_json_path: outputs/metrics/dataset_quality_report.json
+  audit_md_path: outputs/reports/dataset_quality_report.md
+
+text_cleaning:
+  strip_project_gutenberg_boilerplate: true
+  remove_editorial_lines: true
+  normalize_whitespace: true
+  min_alpha_ratio: 0.65
+  min_portuguese_stopword_ratio: 0.015
+
+segmentation:
+  min_words: 80
+  target_words: 160
+  max_words: 220
+  overlap_words: 45
+  min_sentences: 2
+  max_samples_per_work: 850
+  max_samples_per_work_per_class: 320
+  drop_windows_with_editorial_noise: true
+
+labeling:
+  method: balanced_tertiles_by_length_bin
+  length_bins:
+    - [80, 120]
+    - [121, 160]
+    - [161, 220]
+  labels:
+    low: baixa
+    medium: media
+    high: alta
+  target_per_class: 5000
+  min_expected_total_rows: 10000
+  score_weights:
+    avg_sentence_length: 0.18
+    long_word_ratio: 0.12
+    lexical_diversity: 0.10
+    subordination_ratio: 0.13
+    discourse_marker_ratio: 0.10
+    punctuation_density: 0.07
+    abstract_marker_ratio: 0.14
+    ambiguity_marker_ratio: 0.08
+    temporal_marker_ratio: 0.04
+    dialogue_penalty: -0.04
+
+balancing:
+  enabled: true
+  balance_classes: true
+  balance_length_bins: true
+  random_state: 42
+
+audit:
+  critical_max_word_mean_gap_ratio: 0.10
+  critical_min_total_rows: 10000
+  critical_min_rows_per_class: 3000
+  warning_max_author_share: 0.45
+  warning_max_work_share: 0.20
+  repeated_sentence_preview_limit: 30
