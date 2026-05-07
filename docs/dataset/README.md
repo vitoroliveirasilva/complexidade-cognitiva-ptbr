@@ -104,4 +104,4 @@ ruff check .
 
 Os rótulos do dataset são operacionais e heurísticos. Eles representam uma estimativa construída a partir de indicadores linguísticos e discursivos, não uma avaliação humana definitiva de valor literário.
 
-A interpretação dos resultados deve considerar essa natureza operacional, especialmente na análises acadêmicas sobre complexidade cognitiva.
+A interpretação dos resultados deve considerar essa natureza operacional, especialmente nas análises acadêmicas sobre complexidade cognitiva.
