@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 DEFAULT_CONFIG_PATH = Path("configs/config.yaml")
 EXIT_SUCCESS = 0
 EXIT_ERROR = 1
@@ -72,7 +74,41 @@ def run_pipeline(
     if bootstrap_only:
         return pipeline.bootstrap(stage="run_pipeline_bootstrap")
 
-    return pipeline.run()
+    result = pipeline.run()
+    _run_group_cross_validation_if_enabled(config_path)
+    return result
+
+
+# Executa a avaliação complementar por grupo sem substituir a avaliação principal
+def _run_group_cross_validation_if_enabled(config_path: str | Path) -> None:
+    config = _load_raw_config(config_path)
+    group_config = config.get("group_cross_validation", {}) or {}
+    if not bool(group_config.get("enabled", False)):
+        return
+
+    try:
+        _ensure_local_src_on_path()
+        from complexidade_cognitiva_ptbr.evaluation.group_cross_validation import (
+            run_group_cross_validation_from_config,
+        )
+
+        run_group_cross_validation_from_config(config_path=config_path)
+    except Exception as exc:
+        if bool(group_config.get("fail_on_error", False)):
+            raise
+        sys.stderr.write(
+            "Aviso: avaliação complementar por agrupamento não foi concluída: "
+            f"{exc}\n"
+        )
+
+
+# Lê o YAML bruto para detectar se a etapa opcional está habilitada
+def _load_raw_config(config_path: str | Path) -> dict[str, Any]:
+    path = Path(config_path)
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as file:
+        return yaml.safe_load(file) or {}
 
 
 # Carrega a classe do pipeline priorizando o pacote local em `src`
