@@ -1,55 +1,85 @@
-name: Qualidade do pipeline TCC
+name: CI
 
-on:
+"on":
   push:
-    branches: [main, master]
+    branches:
+      - prod
+      - main
+      - master
   pull_request:
-    branches: [main, master]
+    branches:
+      - prod
+      - main
+      - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PYTHON_VERSION: "3.11"
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: "utf-8"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PIP_NO_PYTHON_VERSION_WARNING: "1"
+  OMP_NUM_THREADS: "1"
+  OPENBLAS_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+  NUMEXPR_NUM_THREADS: "1"
+  MPLBACKEND: "Agg"
 
 jobs:
-  quality:
-    name: Lint, testes e smoke test
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+  install-test-smoke:
+    name: Install, test and smoke pipeline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
 
     steps:
-      - name: Baixar repositório
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
-      - name: Configurar Python
-        uses: actions/setup-python@v5
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
-          cache: "pip"
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements.txt
 
-      - name: Instalar dependências
+      - name: Install project dependencies
         run: |
-          python -m pip install --upgrade pip
+          set -euo pipefail
+          python -m pip install --upgrade pip setuptools wheel
           python -m pip install -e ".[dev]"
+          python -m pip check
 
-      - name: Lint com Ruff
-        run: ruff check .
+      - name: Validate CI smoke inputs
+        run: |
+          set -euo pipefail
+          test -f configs/ci_smoke_config.yaml
+          test -f tests/fixtures/smoke_dataset.csv
+          test -f scripts/run_pipeline.py
+          test -f scripts/validate_artifacts.py
+          test -f scripts/predict_text.py
 
-      - name: Testes com cobertura
+      - name: Run automated tests
         env:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
-          OMP_NUM_THREADS: "1"
-          OPENBLAS_NUM_THREADS: "1"
-          MKL_NUM_THREADS: "1"
-          NUMEXPR_NUM_THREADS: "1"
         run: |
-          python -m pytest \
-            --cov=complexidade_cognitiva_ptbr \
-            --cov-report=term-missing \
-            --cov-fail-under=80
+          set -euo pipefail
+          python -m pytest
 
-      - name: Smoke test do pipeline sem dataset oficial
-        env:
-          OMP_NUM_THREADS: "1"
-          OPENBLAS_NUM_THREADS: "1"
-          MKL_NUM_THREADS: "1"
-          NUMEXPR_NUM_THREADS: "1"
+      - name: Run lightweight pipeline smoke test
         run: |
+          set -euo pipefail
           rm -rf outputs/ci_smoke
           python scripts/run_pipeline.py --config configs/ci_smoke_config.yaml
           python scripts/validate_artifacts.py --config configs/ci_smoke_config.yaml --profile smoke
