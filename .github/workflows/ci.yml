@@ -58,7 +58,8 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip setuptools wheel
-          python -m pip install -e ".[dev]"
+          python -m pip install -r requirements.txt
+          python -m pip install -e . --no-deps
           python -m pip check
 
       - name: Validate CI smoke inputs
