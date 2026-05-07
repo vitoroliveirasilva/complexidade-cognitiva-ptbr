@@ -89,8 +89,9 @@ O fluxo experimental previsto é composto pelas seguintes etapas:
 7. preparação do dataset em treino, validação e teste;
 8. verificação de vazamento de dados;
 9. extração de features linguísticas e vetoriais;
-10. validação cruzada;
-11. busca de hiperparâmetros;
+10. validação cruzada tradicional;
+11. avaliação complementar por agrupamento de obra/autor;
+12. busca de hiperparâmetros;
 12. treinamento do melhor modelo;
 13. avaliação final em conjunto de teste;
 14. geração de relatórios, figuras e artefatos de explicabilidade;
@@ -167,6 +168,21 @@ As métricas configuradas para validação cruzada são:
 
 A validação estratificada é importante porque preserva a proporção das classes nas divisões, reduzindo variações artificiais causadas por partições desequilibradas. A análise de validação cruzada deve ser usada para observar estabilidade do desempenho, não apenas o maior valor médio.
 
+### 10.1 Avaliação complementar por agrupamento
+
+Além da validação cruzada tradicional, o projeto inclui uma avaliação complementar por agrupamento com `GroupKFold`. Essa etapa usa preferencialmente a coluna `obra` para impedir que trechos da mesma obra apareçam simultaneamente em treino e validação dentro do mesmo fold. Quando `obra` não está disponível, a rotina tenta fallbacks como `autor` e `fonte`.
+
+Essa avaliação é mais exigente que a validação estratificada convencional, pois mede a capacidade do modelo de generalizar para grupos textuais não vistos naquele fold. Ela não substitui a avaliação principal e deve ser lida como uma camada adicional de controle contra dependência de padrões específicos de obra, autor ou fonte.
+
+Os artefatos previstos são:
+
+```text
+outputs/metrics/group_cross_validation_results.json
+outputs/reports/group_cross_validation_report.md
+```
+
+Quando nenhuma coluna de agrupamento está disponível, o fallback sintético por linha permite execução segura em fixtures pequenas ou CI, mas o relatório registra que esse modo não mede generalização por obra ou autor.
+
 ## 11. Busca de hiperparâmetros
 
 A busca de hiperparâmetros está habilitada na configuração principal com estratégia de grade (`grid`) e métrica de refit `f1_macro`.
@@ -231,7 +247,7 @@ Como não há métricas finais anexadas nesta revisão, a conclusão quantitativ
 
 A explicabilidade está habilitada na configuração principal. O projeto prevê geração de artefatos globais e locais, incluindo termos TF-IDF mais relevantes por classe quando o modelo selecionado permite interpretação por coeficientes.
 
-Esse tipo de explicabilidade é especialmente adequado para modelos lineares, como regressão logística e SVM linear, pois os coeficientes ajudam a identificar quais termos ou n-gramas mais contribuem para cada classe. Para modelos não lineares, como Random Forest, a interpretação por coeficientes diretos não se aplica da mesma forma; nesse caso, a explicabilidade deve usar recursos compatíveis com o modelo disponível.
+Esse tipo de explicabilidade é especialmente adequado para modelos lineares, como regressão logística e SVM linear, pois os coeficientes ajudam a identificar quais termos ou n-gramas mais contribuem para cada classe. Para modelos não lineares, como Random Forest, a interpretação por coeficientes diretos não se aplica da mesma forma e nesse caso, a explicabilidade deve usar recursos compatíveis com o modelo disponível.
 
 A análise dos termos mais associados a cada classe deve ser feita com cuidado. Termos explicativos não devem ser interpretados isoladamente como prova de complexidade cognitiva, mas como indícios estatísticos aprendidos a partir da rubrica e do corpus.
 
@@ -262,6 +278,7 @@ Os principais artefatos previstos são:
 | preparação e features | arquivos em `data/processed` e `data/processed/features`, conforme configuração |
 | treinamento | modelos e metadados em `outputs/models` e/ou `outputs/latest/models` |
 | avaliação | métricas e relatórios em `outputs/metrics`, `outputs/reports` e `outputs/figures` |
+| avaliação por agrupamento | `outputs/metrics/group_cross_validation_results.json`, `outputs/reports/group_cross_validation_report.md` |
 | execuções versionadas | `outputs/runs/<run_id>/` e ponteiro em `outputs/latest/run_id.txt` |
 | explicabilidade | artefatos em `outputs/latest/explainability` e figuras em `outputs/figures` |
 | inferência local | predições em `outputs/latest/predictions/predictions.csv`, quando usado `predict_file.py` |
@@ -276,7 +293,8 @@ As principais limitações metodológicas são:
 4. **Segmentação por janelas**: a análise por trecho pode perder contexto narrativo mais amplo da obra.
 5. **Sobreposição textual**: janelas com sobreposição exigem controle rigoroso de vazamento e quase duplicidade.
 6. **Interpretação de métricas**: bom desempenho quantitativo não deve ser interpretado como validação completa de complexidade cognitiva.
-7. **Ausência de métricas finais versionadas nesta revisão**: sem artefatos finais anexados, não é possível declarar resultados numéricos consolidados neste documento.
+7. **Generalização por obra ou autor**: métricas tradicionais podem ser maiores que a avaliação por agrupamento quando há dependência de padrões específicos de origem textual.
+8. **Ausência de métricas finais versionadas nesta revisão**: sem artefatos finais anexados, não é possível declarar resultados numéricos consolidados neste documento.
 
 Essas limitações não invalidam o experimento, mas delimitam corretamente o alcance das conclusões.
 
@@ -300,6 +318,7 @@ python scripts/dataset_download_sources.py
 python scripts/dataset_build.py
 python scripts/dataset_audit.py
 python scripts/run_pipeline.py
+python scripts/group_cross_validation.py --config configs/config.yaml
 python scripts/validate_artifacts.py --profile complete
 python scripts/predict_text.py --text "O narrador reorganiza lembranças, símbolos e ambiguidades para construir uma interpretação instável dos acontecimentos."
 python -m pytest

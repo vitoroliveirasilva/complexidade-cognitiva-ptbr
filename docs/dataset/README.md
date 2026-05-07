@@ -1,5 +1,5 @@
 # Dataset - Guia rápido
-> Relatório técnico final: consulte [`docs/relatorio_execucao_final.md`](../relatorio_execucao_final.md) para a síntese acadêmica/técnica da execução experimental do projeto.
+> Relatório técnico final: consulte [`docs/relatorio_execucao.md`](../relatorio_execucao.md) para a síntese acadêmica/técnica da execução experimental do projeto.
 
 
 Este diretório documenta a construção do dataset utilizado.
@@ -107,3 +107,24 @@ ruff check .
 Os rótulos do dataset são operacionais e heurísticos. Eles representam uma estimativa construída a partir de indicadores linguísticos e discursivos, não uma avaliação humana definitiva de valor literário.
 
 A interpretação dos resultados deve considerar essa natureza operacional, especialmente nas análises acadêmicas sobre complexidade cognitiva.
+
+## Avaliação complementar por agrupamento
+
+O projeto também possui uma avaliação complementar por agrupamento, voltada a reduzir o risco de o modelo aprender padrões específicos de uma mesma obra ou autor.
+
+A rotina usa preferencialmente a coluna `obra` e caso ela não exista, tenta fallbacks como `autor` e `fonte`. Se nenhuma coluna de agrupamento estiver disponível, aplica fallback sintético por linha e registra essa limitação no relatório.
+
+Execução direta:
+
+```powershell
+python scripts/group_cross_validation.py --config configs/config.yaml
+```
+
+Artefatos gerados:
+
+```text
+outputs/metrics/group_cross_validation_results.json
+outputs/reports/group_cross_validation_report.md
+```
+
+Documentação da avaliação por agrupamento: [`docs/avaliacao_por_grupo.md`](../avaliacao_por_grupo.md).

@@ -174,6 +174,15 @@ python scripts/run_pipeline.py
 
 O pipeline realiza preparação, detecção de vazamento, extração de features, validação cruzada, busca de hiperparâmetros, treinamento, avaliação, explicabilidade e geração de relatórios.
 
+
+## Avaliação por agrupamento de obra ou autor
+
+Além da validação tradicional estratificada, o projeto inclui uma avaliação complementar por agrupamento. Essa avaliação tem o objetivo de reduzir o risco de superestimar o desempenho quando trechos da mesma obra, autor ou fonte aparecem em partições diferentes.
+
+A rotina utiliza `GroupKFold` e procura, preferencialmente, a coluna `obra`. Se essa coluna não existir ou não possuir grupos suficientes, são avaliadas colunas alternativas como `autor` e `fonte`. Quando nenhuma coluna de agrupamento está disponível, a execução aplica fallback sintético por linha e registra a limitação no relatório gerado.
+
+Essa etapa deve ser interpretada como complemento metodológico. Ela não substitui a divisão treino/validação/teste nem a validação cruzada tradicional, mas fornece uma medida mais exigente de generalização quando o corpus possui múltiplos trechos da mesma origem textual.
+
 ## Reprodutibilidade
 
 Para reproduzir o dataset, são necessários:

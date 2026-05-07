@@ -95,3 +95,18 @@ ruff check .
 ## Observação
 
 Como o dataset final é gerado localmente, ele não é versionado.
+
+## 8. Rodar avaliação complementar por agrupamento
+
+```powershell
+python scripts/group_cross_validation.py --config configs/config.yaml
+```
+
+Essa avaliação usa `GroupKFold` e tenta agrupar primeiro por `obra`, depois por colunas alternativas como `autor` ou `fonte`.
+
+Relatórios gerados:
+
+```text
+outputs/metrics/group_cross_validation_results.json
+outputs/reports/group_cross_validation_report.md
+```
