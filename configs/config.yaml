@@ -143,3 +143,29 @@ outputs:
 logging:
   level: "INFO"
   format: "text"
+
+group_cross_validation:
+  enabled: true
+  preferred_group_column: "obra"
+  fallback_group_columns:
+    - "obra"
+    - "titulo"
+    - "título"
+    - "title"
+    - "work"
+    - "autor"
+    - "author"
+    - "fonte"
+    - "source"
+  fallback_strategy: "row_id"
+  n_splits: 5
+  estimator: "logistic_regression"
+  C: 1.0
+  max_iter: 1000
+  class_weight: "balanced"
+  max_features: 5000
+  ngram_range: [1, 2]
+  min_df: 1
+  fail_on_error: false
+  output_json: "outputs/metrics/group_cross_validation_results.json"
+  output_md: "outputs/reports/group_cross_validation_report.md"
