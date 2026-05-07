@@ -1,4 +1,6 @@
 # Dataset - Guia rápido
+> Relatório técnico final: consulte [`docs/relatorio_execucao_final.md`](../relatorio_execucao_final.md) para a síntese acadêmica/técnica da execução experimental do projeto.
+
 
 Este diretório documenta a construção do dataset utilizado.
 
