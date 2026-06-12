@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import hashlib
 import json
 import math
@@ -10,6 +11,7 @@ import re
 import unicodedata
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -386,10 +388,20 @@ def length_bin(n_words: int, bins: list[list[int]]) -> str:
     return "out_of_range"
 
 
-def count_any(tokens: list[str], lexicon: set[str]) -> int:
-    return sum(
-        1 for token in tokens if token in {strip_accents(x.lower()) for x in lexicon}
-    )
+# Normaliza léxicos uma única vez para evitar recomputação por janela
+def normalized_lexicon(lexicon: set[str]) -> set[str]:
+    return {strip_accents(item.lower()) for item in lexicon}
+
+
+SUBORDINATION_NORM = normalized_lexicon(SUBORDINATION)
+DISCOURSE_NORM = normalized_lexicon(DISCOURSE)
+ABSTRACT_MARKERS_NORM = normalized_lexicon(ABSTRACT_MARKERS)
+AMBIGUITY_MARKERS_NORM = normalized_lexicon(AMBIGUITY_MARKERS)
+TEMPORAL_MARKERS_NORM = normalized_lexicon(TEMPORAL_MARKERS)
+
+
+def count_any_from_counter(token_counts: Counter[str], lexicon: set[str]) -> int:
+    return sum(token_counts.get(token, 0) for token in lexicon)
 
 
 def features_for(text: str) -> dict[str, float]:
@@ -399,13 +411,14 @@ def features_for(text: str) -> dict[str, float]:
     unique = len(set(toks))
     sent_lengths = [len(normalized_words(s)) for s in sents]
     avg_sent = sum(sent_lengths) / max(1, len(sent_lengths))
+    token_counts = Counter(toks)
     long_ratio = sum(1 for t in toks if len(t) >= 8) / max(1, n_words)
     ttr = unique / max(1, n_words)
-    sub = count_any(toks, SUBORDINATION) / max(1, n_words)
-    disc = count_any(toks, DISCOURSE) / max(1, n_words)
-    abstract = count_any(toks, ABSTRACT_MARKERS) / max(1, n_words)
-    ambiguity = count_any(toks, AMBIGUITY_MARKERS) / max(1, n_words)
-    temporal = count_any(toks, TEMPORAL_MARKERS) / max(1, n_words)
+    sub = count_any_from_counter(token_counts, SUBORDINATION_NORM) / max(1, n_words)
+    disc = count_any_from_counter(token_counts, DISCOURSE_NORM) / max(1, n_words)
+    abstract = count_any_from_counter(token_counts, ABSTRACT_MARKERS_NORM) / max(1, n_words)
+    ambiguity = count_any_from_counter(token_counts, AMBIGUITY_MARKERS_NORM) / max(1, n_words)
+    temporal = count_any_from_counter(token_counts, TEMPORAL_MARKERS_NORM) / max(1, n_words)
     punct = sum(1 for ch in text if ch in ",;:!?—-()") / max(1, len(text))
     dialogue = 1.0 if re.search(r"(^|\s)[—-]\s*[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ]", text) else 0.0
     return {
@@ -471,6 +484,97 @@ def clean_text_for_csv(text: str) -> str:
     return text
 
 
+
+def process_source_candidates(
+    slug: str,
+    meta: SourceMeta,
+    config: dict[str, Any],
+) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+    # Processa uma obra e retorna candidatos de janelas textuais
+    text_dir = Path(config["paths"]["raw_text_dir"])
+    path = text_dir / f"{slug}.txt"
+    stats: dict[str, Any] = {
+        "slug": slug,
+        "found": path.exists(),
+        "windows_total": 0,
+        "candidates": 0,
+        "skipped": 0,
+    }
+    if not path.exists():
+        return slug, [], stats
+
+    min_words = int(config["segmentation"]["min_words"])
+    target_words = int(config["segmentation"]["target_words"])
+    max_words = int(config["segmentation"]["max_words"])
+    overlap_words = int(config["segmentation"]["overlap_words"])
+    min_sentences = int(config["segmentation"]["min_sentences"])
+    max_samples_per_work = int(config["segmentation"]["max_samples_per_work"])
+    bins = config["labeling"]["length_bins"]
+    weights = config["labeling"]["score_weights"]
+
+    raw = path.read_text(encoding="utf-8", errors="replace")
+    text = strip_boilerplate(raw)
+    text = remove_editorial_lines(text)
+    text = normalize_spaces(text)
+    paragraphs = paragraphs_from_text(text)
+    windows = build_windows(paragraphs, min_words, target_words, max_words, overlap_words)
+    stats["windows_total"] = len(windows)
+
+    rows: list[dict[str, Any]] = []
+    per_work_count = 0
+    for idx, window in enumerate(windows):
+        window = clean_text_for_csv(window)
+        toks = normalized_words(window)
+        if not (min_words <= len(toks) <= max_words):
+            stats["skipped"] += 1
+            continue
+        if len(sentence_split(window)) < min_sentences:
+            stats["skipped"] += 1
+            continue
+        if alpha_ratio(window) < float(config["text_cleaning"]["min_alpha_ratio"]):
+            stats["skipped"] += 1
+            continue
+        if stopword_ratio(toks) < float(config["text_cleaning"]["min_portuguese_stopword_ratio"]):
+            stats["skipped"] += 1
+            continue
+        if config["segmentation"].get("drop_windows_with_editorial_noise", True) and has_editorial_noise(window):
+            stats["skipped"] += 1
+            continue
+
+        h = stable_hash(window)
+        feat = features_for(window)
+        n_words = int(feat["num_palavras"])
+        b = length_bin(n_words, bins)
+        if b == "out_of_range":
+            stats["skipped"] += 1
+            continue
+
+        rows.append(
+            {
+                "_stable_hash": h,
+                "id_base": f"{slug}_{idx:05d}_{h}",
+                "texto": window,
+                "fonte": meta.source,
+                "autor": meta.author,
+                "obra": meta.work,
+                "capitulo": f"janela_{idx:05d}",
+                "tipo_trecho": "janela_textual_dominio_publico",
+                "origem_url": meta.url,
+                "janela_inicio": idx,
+                "janela_fim": idx + target_words,
+                "length_bin": b,
+                "score": complexity_score(feat, weights),
+                **feat,
+            }
+        )
+        per_work_count += 1
+        if per_work_count >= max_samples_per_work * 2:
+            break
+
+    stats["candidates"] = len(rows)
+    return slug, rows, stats
+
+
 def dataset_card(df: pd.DataFrame, config: dict[str, Any]) -> str:
     now = datetime.now(timezone.utc).isoformat()
     lines = [
@@ -525,88 +629,105 @@ def main() -> int:
         action="store_true",
         help="Gera apenas dataset_candidate.csv, sem copiar para data/raw/dataset.csv.",
     )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Se data/raw/dataset.csv já existir, reaproveita o arquivo e encerra rapidamente.",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Número de processos para processar obras em paralelo. Use 1 para modo sequencial.",
+    )
     args = parser.parse_args()
 
     config = load_config(Path(args.config))
     random.seed(int(config["project"].get("random_state", 42)))
     sources = read_sources(Path(config["paths"]["sources_csv"]))
-    text_dir = Path(config["paths"]["raw_text_dir"])
+    candidate_path = Path(config["paths"]["dataset_candidate_path"])
+    main_path = Path(config["paths"]["dataset_main_path"])
+    card_path = Path(config["paths"]["dataset_card_path"])
 
-    min_words = int(config["segmentation"]["min_words"])
-    target_words = int(config["segmentation"]["target_words"])
-    max_words = int(config["segmentation"]["max_words"])
-    overlap_words = int(config["segmentation"]["overlap_words"])
-    min_sentences = int(config["segmentation"]["min_sentences"])
+    if args.skip_existing and main_path.exists() and not args.no_write_main:
+        df_existing = pd.read_csv(main_path)
+        print(
+            json.dumps(
+                {
+                    "status": "skipped_existing_dataset",
+                    "main_path": str(main_path),
+                    "rows": int(len(df_existing)),
+                    "class_distribution": df_existing["target"].value_counts().to_dict()
+                    if "target" in df_existing.columns
+                    else {},
+                    "works": int(df_existing["obra"].nunique())
+                    if "obra" in df_existing.columns
+                    else None,
+                    "authors": int(df_existing["autor"].nunique())
+                    if "autor" in df_existing.columns
+                    else None,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+
     max_samples_per_work = int(config["segmentation"]["max_samples_per_work"])
     max_samples_per_work_per_class = int(
         config["segmentation"]["max_samples_per_work_per_class"]
     )
     bins = config["labeling"]["length_bins"]
     labels = config["labeling"]["labels"]
-    weights = config["labeling"]["score_weights"]
 
+    source_items = list(sources.items())
     candidates: list[dict[str, Any]] = []
     seen_hashes: set[str] = set()
-    for slug, meta in sources.items():
-        path = text_dir / f"{slug}.txt"
-        if not path.exists():
-            print(f"AVISO: texto não encontrado para {slug}: {path}")
-            continue
-        raw = path.read_text(encoding="utf-8", errors="replace")
-        text = strip_boilerplate(raw)
-        text = remove_editorial_lines(text)
-        text = normalize_spaces(text)
-        paragraphs = paragraphs_from_text(text)
-        windows = build_windows(
-            paragraphs, min_words, target_words, max_words, overlap_words
-        )
-        per_work_count = 0
-        for idx, window in enumerate(windows):
-            window = clean_text_for_csv(window)
-            toks = normalized_words(window)
-            if not (min_words <= len(toks) <= max_words):
+    workers = max(1, int(args.workers or 1))
+    if workers > 1:
+        workers = min(workers, len(source_items), os.cpu_count() or workers)
+        print(f"Processando {len(source_items)} obras com {workers} processos...")
+        results_by_slug: dict[str, tuple[list[dict[str, Any]], dict[str, Any]]] = {}
+        with ProcessPoolExecutor(max_workers=workers) as executor:
+            futures = {
+                executor.submit(process_source_candidates, slug, meta, config): slug
+                for slug, meta in source_items
+            }
+            for future in as_completed(futures):
+                slug, rows, stats = future.result()
+                results_by_slug[slug] = (rows, stats)
+                print(
+                    f"OK {slug}: {stats.get('candidates', 0)} candidatos "
+                    f"de {stats.get('windows_total', 0)} janelas"
+                )
+        for slug, _meta in source_items:
+            rows, stats = results_by_slug.get(slug, ([], {"found": False}))
+            if not stats.get("found", False):
+                print(f"AVISO: texto não encontrado para {slug}")
                 continue
-            if len(sentence_split(window)) < min_sentences:
+            for row in rows:
+                h = str(row.pop("_stable_hash"))
+                if h in seen_hashes:
+                    continue
+                seen_hashes.add(h)
+                candidates.append(row)
+    else:
+        print(f"Processando {len(source_items)} obras em modo sequencial...")
+        for slug, meta in source_items:
+            slug, rows, stats = process_source_candidates(slug, meta, config)
+            if not stats.get("found", False):
+                print(f"AVISO: texto não encontrado para {slug}")
                 continue
-            if alpha_ratio(window) < float(config["text_cleaning"]["min_alpha_ratio"]):
-                continue
-            if stopword_ratio(toks) < float(
-                config["text_cleaning"]["min_portuguese_stopword_ratio"]
-            ):
-                continue
-            if config["segmentation"].get(
-                "drop_windows_with_editorial_noise", True
-            ) and has_editorial_noise(window):
-                continue
-            h = stable_hash(window)
-            if h in seen_hashes:
-                continue
-            seen_hashes.add(h)
-            feat = features_for(window)
-            n_words = int(feat["num_palavras"])
-            b = length_bin(n_words, bins)
-            if b == "out_of_range":
-                continue
-            candidates.append(
-                {
-                    "id_base": f"{slug}_{idx:05d}_{h}",
-                    "texto": window,
-                    "fonte": meta.source,
-                    "autor": meta.author,
-                    "obra": meta.work,
-                    "capitulo": f"janela_{idx:05d}",
-                    "tipo_trecho": "janela_textual_dominio_publico",
-                    "origem_url": meta.url,
-                    "janela_inicio": idx,
-                    "janela_fim": idx + target_words,
-                    "length_bin": b,
-                    "score": complexity_score(feat, weights),
-                    **feat,
-                }
+            for row in rows:
+                h = str(row.pop("_stable_hash"))
+                if h in seen_hashes:
+                    continue
+                seen_hashes.add(h)
+                candidates.append(row)
+            print(
+                f"OK {slug}: {stats.get('candidates', 0)} candidatos "
+                f"de {stats.get('windows_total', 0)} janelas"
             )
-            per_work_count += 1
-            if per_work_count >= max_samples_per_work * 2:
-                break
 
     if not candidates:
         raise SystemExit(
@@ -677,8 +798,11 @@ def main() -> int:
         for b in bins_labels:
             chosen_for_label.extend(groups[(label, b)][:per_bin_target])
         if len(chosen_for_label) < n_per_class:
+            chosen_ids = {id(r) for r in chosen_for_label}
             remaining = [
-                r for r in capped if r["target"] == label and r not in chosen_for_label
+                r
+                for r in capped
+                if r["target"] == label and id(r) not in chosen_ids
             ]
             rng.shuffle(remaining)
             chosen_for_label.extend(remaining[: n_per_class - len(chosen_for_label)])
